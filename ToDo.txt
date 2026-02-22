@@ -1,0 +1,36 @@
+- On user login, hide login screen
+- On user login, next step would be to ask user display name and app color preference (sage green, electric blue)
+- for now, just use a placeholder for any user profile image
+
+Top section
+- Lets redesign this top section, using @reference/top-section.png as a reference
+- Remove Logout button from this area, as well as Add Session button
+- Add the users profile too the top left of the screen. Add logout option o this section when the user taps their profile image/icon
+- Below this can be a bright block with the Welcome message and last session details.
+- To the right of this block, we will add an avatar (use references/avatar.png as a placeholder)
+
+- Directly below the user greeting, there should be calendar section. Use @reference/calendar.png as a reference
+- This should highlight the days i have done to gym
+
+- Add session button should be added to the bottom of the screen, the docked menu. This button should be in the middle with a plus icon
+
+Add session from:
+- This popup menu needs to be centre aligned
+- Under cardio, when selecting "exercise", it should open a list of expected exercises (Walk, Run, Row) while also allowing for custom text
+- Under cardio, Duration, distance and speed could be grouped closer to save space. These could also be scrollable "wheel" elements. With an optional tap to enter manually (look at @reference/scrollWhellPrompt.txt for an example)
+- Add Note to section
+- Under Strength, Same thing with selecting exercises
+- Reps should also be a dropdown list of 3 sections (Eg, 10/8/6). As in Each set will have mutliple Reps
+- Also add note section
+- Under Hold, same thing with selecting exercises
+- under Hold, sets and time can also be scrollable "wheel" elements
+
+Dashboard:
+- Graphs should have selectable 30/7/1 day options
+- Weight graph doesnt need to display numbers, just 2 lines. One for day to day weight and another for  average. Tapping a point will display the value and the SD
+
+At the very bottom of the app, the login page is still visible as its own section. This should be hidden/removed
+
+In place of this, can be a list of multiple horizontal tabs/blocks showing each exercise (bisep curls, rowing, etc). Each tab will display the last time i did one of these exercises.
+They will be color coded with a tab getting progressivly more red the longer it has been since i did it
+The tab will also show the last weight (and reps) or duration i did for this exercise
