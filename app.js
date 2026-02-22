@@ -143,11 +143,12 @@ let _authMode = 'login';
 
 function showAuthDialog() {
   const dlg = $('#auth-dialog');
-  dlg.showModal();
+  if (!dlg.open) dlg.showModal();
 }
 
 function hideAuthDialog() {
-  $('#auth-dialog').close();
+  const dlg = $('#auth-dialog');
+  if (dlg.open) dlg.close();
 }
 
 // Prevent Escape / backdrop-click from closing the auth dialog
@@ -1078,10 +1079,13 @@ $('#sessions-list').addEventListener('click', e => {
 $('#detail-close').addEventListener('click', () => $('#detail-dialog').close());
 
 $$('.tab').forEach(tab => tab.addEventListener('click', () => {
+  if (!tab.dataset.target) return;
   $$('.tab').forEach(t => t.classList.remove('active'));
   $$('.view').forEach(v => v.classList.remove('active'));
   tab.classList.add('active');
-  $(`#${tab.dataset.target}`).classList.add('active');
+  const targetView = $(`#${tab.dataset.target}`);
+  if (!targetView) return;
+  targetView.classList.add('active');
   if (tab.dataset.target === 'dashboard-view') renderDashboard();
 }));
 
