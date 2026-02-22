@@ -74,7 +74,13 @@ function profileKey() {
 function loadProfile() {
   if (!state.user) return;
   const raw = localStorage.getItem(profileKey());
-  if (raw) state.profile = { ...state.profile, ...JSON.parse(raw) };
+  if (raw) {
+    try {
+      state.profile = { ...state.profile, ...JSON.parse(raw) };
+    } catch (_err) {
+      localStorage.removeItem(profileKey());
+    }
+  }
   applyThemeColor(state.profile.color || 'sage');
   $('#profile-name').textContent = state.profile.displayName || 'Athlete';
   $('#welcome-title').textContent = `Welcome back, ${state.profile.displayName || 'Athlete'} 👋`;
@@ -208,22 +214,27 @@ $('#auth-form').addEventListener('submit', async e => {
   // onAuthStateChange will fire if success
 });
 
+async function hydrateSignedInUser(sessionUser) {
+  state.user = sessionUser;
+  hideAuthDialog();
+  const firstName = sessionUser.email.split('@')[0];
+  state.profile.displayName = capitalise(firstName);
+  loadProfile();
+  maybeOpenProfileSetup();
+  await loadSessions();
+  renderAll();
+}
+
+function resetSignedOutUser() {
+  state.user = null;
+  state.sessions = [];
+  destroyAllCharts();
+  showAuthDialog();
+}
+
 _supabase.auth.onAuthStateChange(async (_event, session) => {
-  if (session?.user) {
-    state.user = session.user;
-    hideAuthDialog();
-    const firstName = session.user.email.split('@')[0];
-    state.profile.displayName = capitalise(firstName);
-    loadProfile();
-    maybeOpenProfileSetup();
-    await loadSessions();
-    renderAll();
-  } else {
-    state.user = null;
-    state.sessions = [];
-    destroyAllCharts();
-    showAuthDialog();
-  }
+  if (session?.user) await hydrateSignedInUser(session.user);
+  else resetSignedOutUser();
 });
 
 function capitalise(str) {
@@ -1127,5 +1138,12 @@ resetForm();
 // Auth state change will trigger loadSessions + renderAll once session is detected.
 // Show auth immediately if no session exists yet.
 _supabase.auth.getSession().then(({ data: { session } }) => {
-  if (!session) showAuthDialog();
+  if (session?.user) {
+    hydrateSignedInUser(session.user).catch(err => {
+      console.error(err);
+      resetSignedOutUser();
+    });
+  } else {
+    showAuthDialog();
+  }
 });
