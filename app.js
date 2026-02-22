@@ -100,6 +100,9 @@ function hideAuthDialog() {
   $('#auth-dialog').close();
 }
 
+// Prevent Escape / backdrop-click from closing the auth dialog
+$('#auth-dialog').addEventListener('cancel', e => e.preventDefault());
+
 function setAuthMode(mode) {
   _authMode = mode;
   const isLogin = mode === 'login';
