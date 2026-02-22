@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fitness Tracker</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="top-bar card">
+        <div>
+          <h1>Hey Matt 👋</h1>
+          <p id="last-session-text" class="muted">No sessions yet.</p>
+        </div>
+        <button id="add-session-open" class="btn-accent">+ Add Session</button>
+      </header>
+
+      <section id="dashboard-view" class="view active">
+        <div class="grid">
+          <article class="card">
+            <h2>Weight Tracking</h2>
+            <div class="kpis">
+              <div><span class="label">Latest</span><strong id="weight-latest">-</strong></div>
+              <div><span class="label">Rolling Avg (7)</span><strong id="weight-avg">-</strong></div>
+              <div><span class="label">Deviation</span><strong id="weight-dev">-</strong></div>
+            </div>
+            <canvas id="weight-chart" height="170"></canvas>
+          </article>
+
+          <article class="card">
+            <h2>Running Analytics</h2>
+            <div class="kpis">
+              <div><span class="label">Distance 30d</span><strong id="run-30">-</strong></div>
+              <div><span class="label">Distance 7d</span><strong id="run-7">-</strong></div>
+              <div><span class="label">Distance Today</span><strong id="run-today">-</strong></div>
+              <div><span class="label">Best 5km</span><strong id="run-best">-</strong></div>
+            </div>
+            <canvas id="run-chart" height="170"></canvas>
+          </article>
+
+          <article class="card">
+            <h2>Strength Analytics</h2>
+            <div class="kpis">
+              <div><span class="label">Volume 30d</span><strong id="str-30">-</strong></div>
+              <div><span class="label">Volume 7d</span><strong id="str-7">-</strong></div>
+              <div><span class="label">Volume Today</span><strong id="str-today">-</strong></div>
+            </div>
+            <canvas id="muscle-chart" height="190"></canvas>
+          </article>
+        </div>
+      </section>
+
+      <section id="sessions-view" class="view">
+        <article class="card">
+          <h2>Sessions</h2>
+          <ul id="sessions-list" class="sessions-list"></ul>
+        </article>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button data-target="dashboard-view" class="tab active">Dashboard</button>
+      <button data-target="sessions-view" class="tab">Sessions</button>
+    </nav>
+
+    <dialog id="session-dialog">
+      <form id="session-form" method="dialog">
+        <h3 id="dialog-title">Add Session</h3>
+        <label>Date <input name="sessionDate" type="date" required /></label>
+        <label>Weight (kg) <input name="weightKg" type="number" step="0.1" required /></label>
+        <label>Notes <textarea name="notes" rows="2"></textarea></label>
+
+        <fieldset>
+          <legend>Cardio Entry</legend>
+          <label>Exercise <input name="cardioName" placeholder="Run" /></label>
+          <div class="inline">
+            <label>Duration (min) <input name="cardioDuration" type="number" min="0" step="1" /></label>
+            <label>Distance (km) <input name="cardioDistance" type="number" min="0" step="0.01" /></label>
+            <label>Speed (km/h) <input name="cardioSpeed" type="number" min="0" step="0.1" /></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Strength Entry</legend>
+          <label>Exercise <input name="strengthName" placeholder="Bench Press" /></label>
+          <div class="inline">
+            <label>Weight (kg) <input name="strengthWeight" type="number" min="0" step="0.5" /></label>
+            <label>Reps <input name="strengthReps" type="number" min="0" step="1" /></label>
+            <label>Muscle Group
+              <select name="strengthMuscle">
+                <option>Biceps</option><option>Triceps</option><option>Back</option>
+                <option>Chest</option><option>Shoulders</option><option>Legs</option><option>Core</option>
+              </select>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Timed Hold Entry</legend>
+          <div class="inline">
+            <label>Exercise <input name="holdName" placeholder="Plank" /></label>
+            <label>Sets <input name="holdSets" type="number" min="0" step="1" /></label>
+            <label>Seconds per set <input name="holdSeconds" type="number" min="0" step="1" /></label>
+          </div>
+        </fieldset>
+
+        <p id="form-error" class="error"></p>
+        <menu>
+          <button type="button" id="delete-btn" class="btn-danger hidden">Delete</button>
+          <button type="button" id="cancel-btn">Cancel</button>
+          <button type="submit" class="btn-accent">Save Session</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
