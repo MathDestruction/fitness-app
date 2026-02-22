@@ -1116,3 +1116,29 @@ dialog[open].auth-dialog {
   border-color: var(--danger);
   color: var(--danger);
 }
+/* --- Phase refresh styles --- */
+.top-bar { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; padding:12px 0; }
+.profile-shell{position:relative}
+.profile-button{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);padding:6px 8px;border-radius:12px;color:var(--txt);cursor:pointer}
+.profile-avatar,.hero-avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid var(--border-light)}
+.hero-avatar{width:56px;height:56px}
+.profile-menu{position:absolute;top:54px;left:0;background:var(--card);border:1px solid var(--border);border-radius:10px;display:grid;min-width:150px;z-index:20}
+.profile-menu button{background:none;border:none;color:var(--txt);text-align:left;padding:10px 12px;cursor:pointer}
+.welcome-card{background:linear-gradient(135deg,var(--accent-dim),transparent);border:1px solid var(--border);border-radius:14px;padding:10px 12px}
+.welcome-card h1{font-size:1.05rem}
+.calendar-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:12px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-day{background:var(--bg-raised);border:1px solid var(--border);color:var(--txt);padding:8px 0;border-radius:8px}
+.cal-day.done{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+.bottom-nav{grid-template-columns:1fr 1fr 1fr;padding:8px 10px env(safe-area-inset-bottom,8px)}
+.tab-add{width:56px;height:56px;border-radius:50%;margin:-24px auto 0;background:var(--accent);color:#0d1f15;font-size:1.8rem;line-height:1;font-weight:700;display:flex;align-items:center;justify-content:center}
+.range-tabs{display:flex;gap:6px;margin-bottom:10px}
+.range-tab{background:var(--bg-raised);border:1px solid var(--border);color:var(--muted);padding:6px 10px;border-radius:20px;cursor:pointer}
+.range-tab.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent)}
+.recent-exercises{display:grid;gap:8px;max-height:260px;overflow:auto}
+.recent-tab{display:flex;flex-direction:column;background:var(--bg-raised);border:1px solid var(--border);border-radius:10px;padding:9px 10px}
+.recent-tab span{color:var(--muted);font-size:.78rem}
+#session-dialog{margin:auto}
+.compact-group{overflow-x:auto;grid-template-columns:repeat(3,minmax(130px,1fr))!important}
+.set-remove{display:none}
+#logout-btn{color:var(--danger)}
