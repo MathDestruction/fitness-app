@@ -5,7 +5,7 @@
 Top section
 - Lets redesign this top section, using @reference/top-section.png as a reference
 - Remove Logout button from this area, as well as Add Session button
-- Add the users profile too the top left of the screen
+- Add the users profile too the top left of the screen. Add logout option o this section when the user taps their profile image/icon
 - Below this can be a bright block with the Welcome message and last session details.
 - To the right of this block, we will add an avatar (use references/avatar.png as a placeholder)
 
