@@ -950,11 +950,15 @@ textarea {
   height: 100dvh;
   background: transparent;
   padding: 0;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+/* Only show as flex overlay when actually open */
+dialog[open].auth-dialog {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  box-shadow: none;
 }
 
 .auth-dialog::backdrop {
