@@ -12,10 +12,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
-  <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
-    // Supabase config — values from .env
     window.SUPABASE_URL = 'https://mdxytxalmxcysagpwzdd.supabase.co';
     window.SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1keHl0eGFsbXhjeXNhZ3B3emRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NDYzMTksImV4cCI6MjA4NzMyMjMxOX0.XNC9Q9lbuMa6CerRA8uFoGqw83yD5IVhBorYtugArtg';
   </script>
@@ -23,244 +21,151 @@
 
 <body>
   <main class="app-shell">
-    <!-- ───── Header ───── -->
     <header class="top-bar">
-      <div class="greeting">
-        <h1>Fitness Tracker <span class="wave">💪</span></h1>
+      <div class="profile-shell">
+        <button id="profile-button" class="profile-button" aria-label="Open profile menu">
+          <img src="references/avatar.png" alt="Profile" class="profile-avatar" />
+          <div>
+            <strong id="profile-name">Athlete</strong>
+            <span class="muted">Profile</span>
+          </div>
+        </button>
+        <div id="profile-menu" class="profile-menu hidden">
+          <button id="profile-settings-btn">Profile settings</button>
+          <button id="logout-btn">Logout</button>
+        </div>
+      </div>
+      <div class="welcome-card">
+        <h1 id="welcome-title">Welcome back 👋</h1>
         <p id="last-session-text" class="muted">Loading…</p>
       </div>
-      <div class="header-actions">
-        <button id="add-session-open" class="btn-accent btn-add" aria-label="Add Session">
-          <span class="btn-icon">+</span>
-          <span class="btn-label">Add Session</span>
-        </button>
-        <button id="logout-btn" class="btn-logout" title="Sign out">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-            stroke-linejoin="round" viewBox="0 0 24 24">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-        </button>
-      </div>
+      <img src="references/avatar.png" alt="Avatar" class="hero-avatar" />
     </header>
 
-    <!-- ───── Dashboard View ───── -->
+    <section id="calendar-card" class="calendar-card"></section>
+
     <section id="dashboard-view" class="view active">
-      <!-- Weight Tracking -->
+      <div class="range-tabs">
+        <button class="range-tab" data-range="30">30d</button>
+        <button class="range-tab active" data-range="7">7d</button>
+        <button class="range-tab" data-range="1">1d</button>
+      </div>
+
       <article class="card card-glow" id="weight-card">
         <div class="card-header">
           <div class="card-icon">⚖️</div>
           <h2>Weight Tracking</h2>
         </div>
         <div class="kpis kpis-3">
-          <div class="kpi">
-            <span class="kpi-label">Latest</span>
-            <strong id="weight-latest" class="kpi-value">-</strong>
-          </div>
-          <div class="kpi">
-            <span class="kpi-label">Avg (7)</span>
-            <strong id="weight-avg" class="kpi-value">-</strong>
-          </div>
-          <div class="kpi">
-            <span class="kpi-label">Deviation</span>
-            <strong id="weight-dev" class="kpi-value accent">-</strong>
-          </div>
+          <div class="kpi"><span class="kpi-label">Latest</span><strong id="weight-latest" class="kpi-value">-</strong></div>
+          <div class="kpi"><span class="kpi-label">Avg (7)</span><strong id="weight-avg" class="kpi-value">-</strong></div>
+          <div class="kpi"><span class="kpi-label">Deviation</span><strong id="weight-dev" class="kpi-value accent">-</strong></div>
         </div>
-        <div class="chart-wrap">
-          <canvas id="weight-chart"></canvas>
-        </div>
+        <div class="chart-wrap"><canvas id="weight-chart"></canvas></div>
       </article>
 
-      <!-- Running Analytics -->
       <article class="card card-glow" id="running-card">
-        <div class="card-header">
-          <div class="card-icon">🏃</div>
-          <h2>Running Analytics</h2>
-        </div>
+        <div class="card-header"><div class="card-icon">🏃</div><h2>Running Analytics</h2></div>
         <div class="kpis kpis-4">
-          <div class="kpi">
-            <span class="kpi-label">30 days</span>
-            <strong id="run-30" class="kpi-value">-</strong>
-          </div>
-          <div class="kpi">
-            <span class="kpi-label">7 days</span>
-            <strong id="run-7" class="kpi-value">-</strong>
-          </div>
-          <div class="kpi">
-            <span class="kpi-label">Today</span>
-            <strong id="run-today" class="kpi-value">-</strong>
-          </div>
-          <div class="kpi">
-            <span class="kpi-label">Best 5km</span>
-            <strong id="run-best" class="kpi-value accent">-</strong>
-          </div>
+          <div class="kpi"><span class="kpi-label">30 days</span><strong id="run-30" class="kpi-value">-</strong></div>
+          <div class="kpi"><span class="kpi-label">7 days</span><strong id="run-7" class="kpi-value">-</strong></div>
+          <div class="kpi"><span class="kpi-label">Today</span><strong id="run-today" class="kpi-value">-</strong></div>
+          <div class="kpi"><span class="kpi-label">Best 5km</span><strong id="run-best" class="kpi-value accent">-</strong></div>
         </div>
         <div class="chart-tabs">
           <button class="chart-tab active" data-chart="run-distance">Distance</button>
           <button class="chart-tab" data-chart="run-speed">Speed</button>
           <button class="chart-tab" data-chart="run-dual">Combined</button>
         </div>
-        <div class="chart-wrap">
-          <canvas id="run-chart"></canvas>
-        </div>
+        <div class="chart-wrap"><canvas id="run-chart"></canvas></div>
       </article>
 
-      <!-- Strength Analytics -->
       <article class="card card-glow" id="strength-card">
-        <div class="card-header">
-          <div class="card-icon">💪</div>
-          <h2>Strength Analytics</h2>
-        </div>
+        <div class="card-header"><div class="card-icon">💪</div><h2>Strength Analytics</h2></div>
         <div class="kpis kpis-3">
-          <div class="kpi">
-            <span class="kpi-label">Vol 30d</span>
-            <strong id="str-30" class="kpi-value">-</strong>
-          </div>
-          <div class="kpi">
-            <span class="kpi-label">Vol 7d</span>
-            <strong id="str-7" class="kpi-value">-</strong>
-          </div>
-          <div class="kpi">
-            <span class="kpi-label">Vol Today</span>
-            <strong id="str-today" class="kpi-value">-</strong>
-          </div>
+          <div class="kpi"><span class="kpi-label">Vol 30d</span><strong id="str-30" class="kpi-value">-</strong></div>
+          <div class="kpi"><span class="kpi-label">Vol 7d</span><strong id="str-7" class="kpi-value">-</strong></div>
+          <div class="kpi"><span class="kpi-label">Vol Today</span><strong id="str-today" class="kpi-value">-</strong></div>
         </div>
-        <div class="chart-wrap chart-wrap-tall">
-          <canvas id="muscle-chart"></canvas>
-        </div>
+        <div class="chart-wrap chart-wrap-tall"><canvas id="muscle-chart"></canvas></div>
+      </article>
+
+      <article class="card">
+        <div class="card-header"><div class="card-icon">⏱️</div><h2>Recent Exercises</h2></div>
+        <div id="recent-exercises" class="recent-exercises"></div>
       </article>
     </section>
 
-    <!-- ───── Sessions View ───── -->
     <section id="sessions-view" class="view">
       <article class="card">
-        <div class="card-header">
-          <div class="card-icon">📋</div>
-          <h2>Session History</h2>
-        </div>
+        <div class="card-header"><div class="card-icon">📋</div><h2>Session History</h2></div>
         <ul id="sessions-list" class="sessions-list"></ul>
       </article>
     </section>
   </main>
 
-  <!-- ───── Bottom Nav ───── -->
   <nav class="bottom-nav" id="bottom-nav">
-    <button data-target="dashboard-view" class="tab active" id="tab-dashboard">
-      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-        stroke-linejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="12" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="12" width="7" height="7" rx="1" />
-        <rect x="12" y="12" width="7" height="7" rx="1" />
-      </svg>
-      <span>Dashboard</span>
-    </button>
-    <button data-target="sessions-view" class="tab" id="tab-sessions">
-      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-        stroke-linejoin="round">
-        <line x1="8" y1="6" x2="21" y2="6" />
-        <line x1="8" y1="12" x2="21" y2="12" />
-        <line x1="8" y1="18" x2="21" y2="18" />
-        <line x1="3" y1="6" x2="3.01" y2="6" />
-        <line x1="3" y1="12" x2="3.01" y2="12" />
-        <line x1="3" y1="18" x2="3.01" y2="18" />
-      </svg>
-      <span>Sessions</span>
-    </button>
+    <button data-target="dashboard-view" class="tab active" id="tab-dashboard"><span>Dashboard</span></button>
+    <button id="add-session-open" class="tab tab-add" aria-label="Add Session">+</button>
+    <button data-target="sessions-view" class="tab" id="tab-sessions"><span>Sessions</span></button>
   </nav>
 
-  <!-- ───── Session Dialog ───── -->
   <dialog id="session-dialog">
     <form id="session-form" method="dialog">
-      <div class="dialog-header">
-        <h3 id="dialog-title">Add Session</h3>
-        <button type="button" id="cancel-btn" class="btn-icon-close" aria-label="Close">✕</button>
-      </div>
-
+      <div class="dialog-header"><h3 id="dialog-title">Add Session</h3><button type="button" id="cancel-btn" class="btn-icon-close">✕</button></div>
       <div class="form-section">
         <div class="form-row">
-          <label class="form-label">
-            <span>Date</span>
-            <input name="sessionDate" type="date" required />
-          </label>
-          <label class="form-label">
-            <span>Weight (kg)</span>
-            <input name="weightKg" type="number" step="0.1" required />
-          </label>
+          <label class="form-label"><span>Date</span><input name="sessionDate" type="date" required /></label>
+          <label class="form-label"><span>Weight (kg)</span><input name="weightKg" type="number" step="0.1" required /></label>
         </div>
-        <label class="form-label">
-          <span>Notes</span>
-          <textarea name="notes" rows="2" placeholder="How was the session?"></textarea>
-        </label>
+        <label class="form-label"><span>Notes</span><textarea name="notes" rows="2"></textarea></label>
       </div>
-
-      <!-- Dynamic entries container -->
       <div id="entries-container"></div>
-
       <div class="entry-add-bar">
-        <button type="button" class="btn-entry-add" data-entry-type="cardio">
-          <span class="entry-icon">🏃</span> Cardio
-        </button>
-        <button type="button" class="btn-entry-add" data-entry-type="strength">
-          <span class="entry-icon">💪</span> Strength
-        </button>
-        <button type="button" class="btn-entry-add" data-entry-type="hold">
-          <span class="entry-icon">🧘</span> Hold
-        </button>
+        <button type="button" class="btn-entry-add" data-entry-type="cardio">🏃 Cardio</button>
+        <button type="button" class="btn-entry-add" data-entry-type="strength">💪 Strength</button>
+        <button type="button" class="btn-entry-add" data-entry-type="hold">🧘 Hold</button>
       </div>
-
       <p id="form-error" class="error"></p>
-
-      <div class="dialog-actions">
-        <button type="button" id="delete-btn" class="btn-danger hidden">Delete Session</button>
-        <div class="dialog-actions-right">
-          <button type="submit" class="btn-accent btn-save">Save Session</button>
-        </div>
-      </div>
+      <div class="dialog-actions"><button type="button" id="delete-btn" class="btn-danger hidden">Delete Session</button><div class="dialog-actions-right"><button type="submit" class="btn-accent btn-save">Save Session</button></div></div>
     </form>
   </dialog>
 
-  <!-- ───── Session Detail Dialog ───── -->
   <dialog id="detail-dialog">
-    <div class="dialog-header">
-      <h3 id="detail-title">Session Detail</h3>
-      <button type="button" id="detail-close" class="btn-icon-close" aria-label="Close">✕</button>
-    </div>
+    <div class="dialog-header"><h3 id="detail-title">Session Detail</h3><button type="button" id="detail-close" class="btn-icon-close">✕</button></div>
     <div id="detail-body" class="detail-body"></div>
-    <div class="dialog-actions">
-      <button type="button" id="detail-edit" class="btn-accent">Edit Session</button>
-    </div>
+    <div class="dialog-actions"><button type="button" id="detail-edit" class="btn-accent">Edit Session</button></div>
   </dialog>
 
-  <!-- Auth overlay -->
   <dialog id="auth-dialog" class="auth-dialog">
     <div class="auth-box">
-      <div class="auth-logo">🏋️</div>
       <h2 class="auth-title">Fitness Tracker</h2>
-      <p class="auth-sub">Track every rep. Own your progress.</p>
-
-      <div class="auth-tabs">
-        <button class="auth-tab active" data-auth="login">Sign In</button>
-        <button class="auth-tab" data-auth="signup">Sign Up</button>
-      </div>
-
+      <div class="auth-tabs"><button class="auth-tab active" data-auth="login">Sign In</button><button class="auth-tab" data-auth="signup">Sign Up</button></div>
       <form id="auth-form" class="auth-form">
-        <label class="form-label">
-          <span>Email</span>
-          <input id="auth-email" type="email" placeholder="you@example.com" required autocomplete="email" />
-        </label>
-        <label class="form-label">
-          <span>Password</span>
-          <input id="auth-password" type="password" placeholder="••••••••" required autocomplete="current-password" />
-        </label>
+        <label class="form-label"><span>Email</span><input id="auth-email" type="email" required autocomplete="email" /></label>
+        <label class="form-label"><span>Password</span><input id="auth-password" type="password" required autocomplete="current-password" /></label>
         <p id="auth-error" class="error"></p>
-        <button type="submit" id="auth-submit" class="btn-accent" style="width:100%;margin-top:4px;">Sign In</button>
+        <button type="submit" id="auth-submit" class="btn-accent" style="width:100%;">Sign In</button>
       </form>
-
       <p class="auth-footer" id="auth-footer">Don't have an account? <a href="#" id="auth-switch">Sign up</a></p>
     </div>
   </dialog>
+
+  <dialog id="profile-dialog">
+    <form id="profile-form" method="dialog">
+      <div class="dialog-header"><h3>Profile setup</h3><button type="button" id="profile-cancel" class="btn-icon-close">✕</button></div>
+      <div class="form-section">
+        <label class="form-label"><span>Display name</span><input id="display-name" required /></label>
+        <label class="form-label"><span>App color</span><select id="app-color"><option value="sage" selected>Sage Green</option><option value="blue">Electric Blue</option></select></label>
+      </div>
+      <div class="dialog-actions"><div class="dialog-actions-right"><button id="profile-save" class="btn-accent" type="submit">Save</button></div></div>
+    </form>
+  </dialog>
+
+
+  <datalist id="cardio-options"><option>Walk</option><option>Run</option><option>Row</option></datalist>
+  <datalist id="strength-options"><option>Bicep Curl</option><option>Bench Press</option><option>Squat</option></datalist>
+  <datalist id="hold-options"><option>Plank</option><option>Wall Sit</option><option>Dead Hang</option></datalist>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <script src="app.js"></script>
