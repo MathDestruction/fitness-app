@@ -5,6 +5,8 @@
 
 /* ─── Supabase Client ─── */
 const _supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON);
+const USE_AUTH = false;
+const LOCAL_SESSIONS_KEY = 'fitness_sessions_local_v1';
 
 /* ─── Constants ─── */
 const MUSCLES = ['Biceps', 'Triceps', 'Back', 'Chest', 'Shoulders', 'Legs', 'Core'];
@@ -53,7 +55,50 @@ const state = {
   entryCounter: 0,
   charts: {},
   activeRunChart: 'run-distance',
+  selectedRange: 7,
+  profile: { displayName: 'Athlete', color: 'sage' },
+  bootstrappedAuth: false,
 };
+
+const DEMO_SESSIONS = [
+  {
+    id: 'demo-1',
+    sessionDate: '2026-02-21',
+    weightKg: 82.4,
+    notes: 'Great energy today',
+    entries: [
+      { type: 'cardio', exercise: 'Run', durationMin: 15, speedKmh: 9, distanceKm: 2.25, note: '' },
+      { type: 'hold', exercise: 'Plank', sets: 2, seconds: 60, note: '' },
+      { type: 'strength', exercise: 'Seated Row', muscle: 'Back', sets: [{ weightKg: 29, reps: 10 }, { weightKg: 29, reps: 8 }, { weightKg: 29, reps: 6 }], note: '' },
+      { type: 'strength', exercise: 'Bicep Curl', muscle: 'Biceps', sets: [{ weightKg: 32, reps: 10 }, { weightKg: 32, reps: 8 }, { weightKg: 32, reps: 6 }], note: '' },
+    ],
+  },
+  {
+    id: 'demo-2',
+    sessionDate: '2026-02-19',
+    weightKg: 82.8,
+    notes: '',
+    entries: [
+      { type: 'strength', exercise: 'Lat Pulldown', muscle: 'Back', sets: [{ weightKg: 43, reps: 10 }, { weightKg: 43, reps: 8 }, { weightKg: 43, reps: 6 }], note: '' },
+      { type: 'strength', exercise: 'Tricep Pushdown', muscle: 'Triceps', sets: [{ weightKg: 45, reps: 10 }, { weightKg: 40, reps: 8 }, { weightKg: 40, reps: 6 }], note: '' },
+      { type: 'strength', exercise: 'Bicep Curl', muscle: 'Biceps', sets: [{ weightKg: 36, reps: 10 }, { weightKg: 36, reps: 8 }, { weightKg: 36, reps: 6 }], note: '' },
+    ],
+  },
+  {
+    id: 'demo-3',
+    sessionDate: '2026-02-17',
+    weightKg: 83.1,
+    notes: '',
+    entries: [
+      { type: 'cardio', exercise: 'Run', durationMin: 36, distanceKm: 5, speedKmh: 8, note: '' },
+      { type: 'strength', exercise: 'Chest Press', muscle: 'Chest', sets: [{ weightKg: 29, reps: 10 }, { weightKg: 29, reps: 8 }, { weightKg: 29, reps: 6 }], note: '' },
+    ],
+  },
+];
+
+function saveLocalSessions() {
+  localStorage.setItem(LOCAL_SESSIONS_KEY, JSON.stringify(state.sessions));
+}
 
 /* ─── DOM Helpers ─── */
 const $ = (s, root = document) => root.querySelector(s);
@@ -64,6 +109,54 @@ const dateFmt = d => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day
 const dateFmtShort = d => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 const today = new Date().toISOString().slice(0, 10);
 const dayMs = 86400000;
+
+function profileKey() {
+  return state.user ? `fitness_profile_${state.user.id}` : '';
+}
+
+function loadProfile() {
+  if (!state.user) return;
+  const raw = localStorage.getItem(profileKey());
+  if (raw) {
+    try {
+      state.profile = { ...state.profile, ...JSON.parse(raw) };
+    } catch (_err) {
+      localStorage.removeItem(profileKey());
+    }
+  }
+  applyThemeColor(state.profile.color || 'sage');
+  $('#profile-name').textContent = state.profile.displayName || 'Athlete';
+  $('#welcome-title').textContent = `Welcome back, ${state.profile.displayName || 'Athlete'} 👋`;
+}
+
+function saveProfile(profile) {
+  state.profile = { ...state.profile, ...profile };
+  localStorage.setItem(profileKey(), JSON.stringify(state.profile));
+  loadProfile();
+}
+
+function applyThemeColor(color) {
+  const root = document.documentElement;
+  if (color === 'blue') {
+    root.style.setProperty('--accent', '#4CB7FF');
+    root.style.setProperty('--accent-hover', '#2FA6F4');
+    root.style.setProperty('--accent-dim', 'rgba(76,183,255,0.14)');
+  } else {
+    root.style.setProperty('--accent', '#86C8A3');
+    root.style.setProperty('--accent-hover', '#72B691');
+    root.style.setProperty('--accent-dim', 'rgba(134, 200, 163, 0.12)');
+  }
+}
+
+function maybeOpenProfileSetup() {
+  if (!state.user) return;
+  const raw = localStorage.getItem(profileKey());
+  if (!raw) {
+    $('#display-name').value = state.user.email.split('@')[0];
+    $('#app-color').value = 'sage';
+    $('#profile-dialog').showModal();
+  }
+}
 
 function inDays(dateStr, days) {
   return (new Date(today) - new Date(dateStr)) / dayMs <= days - 1;
@@ -92,12 +185,15 @@ function showToast(msg, type = 'success') {
 let _authMode = 'login';
 
 function showAuthDialog() {
+  if (!USE_AUTH) return;
   const dlg = $('#auth-dialog');
-  dlg.showModal();
+  if (!dlg.open) dlg.showModal();
 }
 
 function hideAuthDialog() {
-  $('#auth-dialog').close();
+  if (!USE_AUTH) return;
+  const dlg = $('#auth-dialog');
+  if (dlg.open) dlg.close();
 }
 
 // Prevent Escape / backdrop-click from closing the auth dialog
@@ -124,6 +220,7 @@ $$('.auth-tab').forEach(t => t.addEventListener('click', () => setAuthMode(t.dat
 wireAuthSwitch();
 
 $('#auth-form').addEventListener('submit', async e => {
+  if (!USE_AUTH) return;
   e.preventDefault();
   const email = $('#auth-email').value.trim();
   const password = $('#auth-password').value;
@@ -164,20 +261,36 @@ $('#auth-form').addEventListener('submit', async e => {
   // onAuthStateChange will fire if success
 });
 
-_supabase.auth.onAuthStateChange(async (_event, session) => {
+async function hydrateSignedInUser(sessionUser) {
+  state.user = sessionUser;
+  hideAuthDialog();
+  const firstName = sessionUser.email.split('@')[0];
+  state.profile.displayName = capitalise(firstName);
+  loadProfile();
+  maybeOpenProfileSetup();
+  await loadSessions();
+  renderAll();
+}
+
+function resetSignedOutUser() {
+  if (!USE_AUTH) return;
+  state.user = null;
+  state.sessions = [];
+  destroyAllCharts();
+  showAuthDialog();
+}
+
+_supabase.auth.onAuthStateChange(async (event, session) => {
+  if (!USE_AUTH) return;
   if (session?.user) {
-    state.user = session.user;
-    hideAuthDialog();
-    const firstName = session.user.email.split('@')[0];
-    $('h1').innerHTML = `Hey ${capitalise(firstName)} <span class="wave">👋</span>`;
-    await loadSessions();
-    renderAll();
-  } else {
-    state.user = null;
-    state.sessions = [];
-    destroyAllCharts();
-    showAuthDialog();
+    await hydrateSignedInUser(session.user);
+    return;
   }
+
+  // Ignore transient null-session events once a user is already hydrated,
+  // unless this is an explicit sign-out.
+  if (state.user && event !== 'SIGNED_OUT') return;
+  resetSignedOutUser();
 });
 
 function capitalise(str) {
@@ -185,6 +298,10 @@ function capitalise(str) {
 }
 
 $('#logout-btn').addEventListener('click', async () => {
+  if (!USE_AUTH) {
+    showToast('Auth disabled in local mode.', 'success');
+    return;
+  }
   await _supabase.auth.signOut();
 });
 
@@ -200,6 +317,7 @@ function rowsToSession(sessionRow, entryRows, strengthRows) {
       _id: e.id,
       type: e.type,
       exercise: e.exercise_name,
+      note: e.notes || '',
     };
     if (e.type === 'cardio') {
       return {
@@ -234,6 +352,21 @@ function rowsToSession(sessionRow, entryRows, strengthRows) {
 }
 
 async function loadSessions() {
+  if (!USE_AUTH) {
+    const raw = localStorage.getItem(LOCAL_SESSIONS_KEY);
+    if (raw) {
+      try {
+        state.sessions = JSON.parse(raw);
+      } catch (_err) {
+        state.sessions = JSON.parse(JSON.stringify(DEMO_SESSIONS));
+        saveLocalSessions();
+      }
+    } else {
+      state.sessions = JSON.parse(JSON.stringify(DEMO_SESSIONS));
+      saveLocalSessions();
+    }
+    return;
+  }
   if (!state.user) return;
 
   // Fetch sessions
@@ -274,6 +407,19 @@ async function loadSessions() {
 }
 
 async function saveSessionToDb(session) {
+  if (!USE_AUTH) {
+    const payload = {
+      ...session,
+      id: state.editingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
+    };
+    if (state.editingId) {
+      state.sessions = state.sessions.map(s => s.id === state.editingId ? payload : s);
+    } else {
+      state.sessions.push(payload);
+    }
+    saveLocalSessions();
+    return;
+  }
   const isEdit = !!state.editingId;
 
   if (isEdit) {
@@ -324,6 +470,7 @@ async function insertEntries(sessionId, entries) {
       exercise_name: e.exercise,
       type: e.type,
       sort_order: i,
+      notes: e.note || null,
     };
     if (e.type === 'cardio') {
       entryRow.duration_seconds = e.durationMin ? Math.round(e.durationMin * 60) : null;
@@ -354,6 +501,11 @@ async function insertEntries(sessionId, entries) {
 }
 
 async function deleteSessionFromDb(id) {
+  if (!USE_AUTH) {
+    state.sessions = state.sessions.filter(s => s.id !== id);
+    saveLocalSessions();
+    return;
+  }
   // Cascade handles entries + strength_sets
   const { error } = await _supabase.from('sessions').delete().eq('id', id);
   if (error) throw error;
@@ -434,9 +586,51 @@ function renderDashboard() {
     ? `Last session: ${dateFmt(last.sessionDate)} · ${last.weightKg} kg`
     : 'No sessions yet. Add your first!';
 
-  renderWeightChart(sessions);
-  renderRunningAnalytics(sessions);
-  renderStrengthAnalytics(sessions);
+  const filtered = sessions.filter(s => inDays(s.sessionDate, state.selectedRange));
+  renderWeightChart(filtered);
+  renderRunningAnalytics(filtered);
+  renderStrengthAnalytics(filtered);
+  renderCalendar(sessions);
+  renderRecentExerciseTabs(sessions);
+}
+
+function renderCalendar(sessions) {
+  const card = $('#calendar-card');
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const first = new Date(year, month, 1);
+  const startDay = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const done = new Set(sessions.filter(s => s.sessionDate.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)).map(s => Number(s.sessionDate.slice(-2))));
+  let cells = '<div class="cal-grid">';
+  for (let i = 0; i < startDay; i++) cells += '<span></span>';
+  for (let d = 1; d <= daysInMonth; d++) cells += `<button class="cal-day ${done.has(d) ? 'done' : ''}" data-day="${d}">${d}</button>`;
+  cells += '</div>';
+  card.innerHTML = `<div class="card-header"><div class="card-icon">🗓️</div><h2>Gym Days</h2></div>${cells}`;
+  card.querySelectorAll('.cal-day.done').forEach(btn => btn.onclick = () => {
+    const day = String(btn.dataset.day).padStart(2, '0');
+    const ds = `${year}-${String(month + 1).padStart(2, '0')}-${day}`;
+    const match = state.sessions.find(s => s.sessionDate === ds);
+    if (match) showSessionDetail(match.id);
+  });
+}
+
+function renderRecentExerciseTabs() {
+  const out = $('#recent-exercises');
+  const latestByExercise = new Map();
+  sortedDesc().forEach(s => s.entries.forEach(e => {
+    if (!latestByExercise.has(e.exercise)) latestByExercise.set(e.exercise, { session: s, entry: e });
+  }));
+  if (!latestByExercise.size) { out.innerHTML = '<p class="muted">No exercise history yet.</p>'; return; }
+  out.innerHTML = [...latestByExercise.entries()].slice(0, 20).map(([name, data]) => {
+    const days = Math.max(0, Math.floor((new Date(today) - new Date(data.session.sessionDate)) / dayMs));
+    const hue = Math.max(0, 120 - (days * 6));
+    const detail = data.entry.type === 'strength'
+      ? `${data.entry.sets?.[0]?.weightKg || 0}kg · ${data.entry.sets?.map(x => x.reps).join('/') || '0'}`
+      : `${data.entry.durationMin || data.entry.seconds || 0}${data.entry.type === 'hold' ? 's' : 'm'}`;
+    return `<div class="recent-tab" style="border-left:4px solid hsl(${hue} 80% 55%)"><strong>${name}</strong><span>${days}d ago · ${detail}</span></div>`;
+  }).join('');
 }
 
 /* ─── Weight Chart ─── */
@@ -476,10 +670,17 @@ function renderWeightChart(sessions) {
           callbacks: {
             title: items => dateFmt(sessions[items[0].dataIndex]?.sessionDate || ''),
             label: item => `${item.dataset.label}: ${item.parsed.y.toFixed(1)} kg`,
+            afterLabel: item => {
+              const idx = item.dataIndex;
+              const vals = weights.slice(Math.max(0, idx - 6), idx + 1);
+              const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+              const sd = Math.sqrt(vals.reduce((a, b) => a + ((b - mean) ** 2), 0) / vals.length);
+              return `Rolling SD: ${sd.toFixed(2)} kg`;
+            },
           }
         }
       },
-      scales: { x: { ticks: { maxRotation: 0 } }, y: { ticks: { callback: v => v + ' kg' } } },
+      scales: { x: { ticks: { maxRotation: 0 } }, y: { ticks: { display: false }, grid: { display: false } } },
     },
   });
 }
@@ -706,15 +907,16 @@ function addEntryCard(type, data = null) {
       <div class="entry-fields">
         <div class="search-wrap">
           <label class="form-label"><span>Exercise</span>
-            <input type="text" class="exercise-search" data-search-type="cardio" placeholder="Search exercise…" value="${data?.exercise || ''}" autocomplete="off" />
+            <input list="cardio-options" type="text" class="exercise-search" data-search-type="cardio" placeholder="Walk / Run / Row or custom" value="${data?.exercise || ''}" autocomplete="off" />
           </label>
           <div class="search-suggestions" id="suggestions-${idx}"></div>
         </div>
-        <div class="form-row-3">
+        <div class="form-row-3 compact-group">
           <label class="form-label"><span>Duration (min)</span><input type="number" class="entry-dur" min="0" step="1" value="${data?.durationMin || ''}" /></label>
           <label class="form-label"><span>Distance (km)</span><input type="number" class="entry-dist" min="0" step="0.01" value="${data?.distanceKm || ''}" /></label>
           <label class="form-label"><span>Speed (km/h)</span><input type="number" class="entry-speed" min="0" step="0.1" value="${data?.speedKmh || ''}" /></label>
         </div>
+        <label class="form-label"><span>Note</span><textarea class="entry-note" rows="2">${data?.note || ''}</textarea></label>
       </div>`;
   } else if (type === 'strength') {
     const muscle = data?.muscle || 'Chest';
@@ -726,28 +928,29 @@ function addEntryCard(type, data = null) {
         <div class="form-row" style="grid-template-columns:1fr auto;">
           <div class="search-wrap">
             <label class="form-label"><span>Exercise</span>
-              <input type="text" class="exercise-search" data-search-type="strength" placeholder="Search exercise…" value="${data?.exercise || ''}" autocomplete="off" />
+              <input list="strength-options" type="text" class="exercise-search" data-search-type="strength" placeholder="Select or enter custom" value="${data?.exercise || ''}" autocomplete="off" />
             </label>
             <div class="search-suggestions" id="suggestions-${idx}"></div>
           </div>
           <label class="form-label"><span>Muscle</span><select class="entry-muscle">${muscleOpts}</select></label>
         </div>
-        <div class="sets-container">${setsHTML}</div>
-        <button type="button" class="btn-add-set">+ Add Set</button>
+        <div class="sets-container">${(data?.sets || [{ weightKg: '', reps: '' }, { weightKg: '', reps: '' }, { weightKg: '', reps: '' }]).slice(0,3).map((s, si) => buildSetRow(si + 1, s.weightKg, s.reps)).join('')}</div>
+        <label class="form-label"><span>Note</span><textarea class="entry-note" rows="2">${data?.note || ''}</textarea></label>
       </div>`;
   } else {
     fieldsHTML = `
       <div class="entry-fields">
         <div class="search-wrap">
           <label class="form-label"><span>Exercise</span>
-            <input type="text" class="exercise-search" data-search-type="hold" placeholder="Search exercise…" value="${data?.exercise || ''}" autocomplete="off" />
+            <input list="hold-options" type="text" class="exercise-search" data-search-type="hold" placeholder="Select or enter custom" value="${data?.exercise || ''}" autocomplete="off" />
           </label>
           <div class="search-suggestions" id="suggestions-${idx}"></div>
         </div>
         <div class="form-row-3" style="grid-template-columns:1fr 1fr;">
-          <label class="form-label"><span>Sets</span><input type="number" class="entry-hold-sets" min="1" step="1" value="${data?.sets || ''}" /></label>
-          <label class="form-label"><span>Seconds / set</span><input type="number" class="entry-hold-secs" min="0" step="1" value="${data?.seconds || ''}" /></label>
+          <label class="form-label"><span>Sets</span><select class="entry-hold-sets">${[1,2,3,4,5,6,7,8,9,10,12,15].map(n=>`<option ${Number(data?.sets||1)===n?'selected':''}>${n}</option>`).join('')}</select></label>
+          <label class="form-label"><span>Seconds / set</span><select class="entry-hold-secs">${[10,15,20,30,45,60,75,90,120,180].map(n=>`<option ${Number(data?.seconds||30)===n?'selected':''}>${n}</option>`).join('')}</select></label>
         </div>
+        <label class="form-label"><span>Note</span><textarea class="entry-note" rows="2">${data?.note || ''}</textarea></label>
       </div>`;
   }
 
@@ -765,16 +968,7 @@ function addEntryCard(type, data = null) {
     setTimeout(() => card.remove(), 200);
   });
 
-  const addSetBtn = card.querySelector('.btn-add-set');
-  if (addSetBtn) {
-    addSetBtn.addEventListener('click', () => {
-      const setsC = card.querySelector('.sets-container');
-      const num = setsC.children.length + 1;
-      setsC.insertAdjacentHTML('beforeend', buildSetRow(num, '', ''));
-      wireSetRemove(setsC);
-    });
-    wireSetRemove(card.querySelector('.sets-container'));
-  }
+  wireSetRemove(card.querySelector('.sets-container'));
   wireSmartSearch(card, type);
   return card;
 }
@@ -883,7 +1077,8 @@ function collectEntries() {
       const dist = Number(card.querySelector('.entry-dist')?.value) || 0;
       const speed = Number(card.querySelector('.entry-speed')?.value) || 0;
       if (!dur && !dist) { errors.push('Cardio must include duration or distance.'); continue; }
-      entries.push({ type: 'cardio', exercise, durationMin: dur || undefined, distanceKm: dist || undefined, speedKmh: speed || undefined });
+      const note = card.querySelector('.entry-note')?.value?.trim() || '';
+      entries.push({ type: 'cardio', exercise, durationMin: dur || undefined, distanceKm: dist || undefined, speedKmh: speed || undefined, note });
     } else if (type === 'strength') {
       const exercise = card.querySelector('.exercise-search')?.value?.trim() || 'Strength';
       const muscle = card.querySelector('.entry-muscle')?.value || 'Core';
@@ -895,12 +1090,14 @@ function collectEntries() {
         if (r > 0) sets.push({ weightKg: w, reps: r });
       });
       if (!sets.length) { errors.push(`Strength entry "${exercise}" needs at least 1 set with reps.`); continue; }
-      entries.push({ type: 'strength', exercise, sets, muscle });
+      const note = card.querySelector('.entry-note')?.value?.trim() || '';
+      entries.push({ type: 'strength', exercise, sets, muscle, note });
     } else if (type === 'hold') {
       const exercise = card.querySelector('.exercise-search')?.value?.trim() || 'Hold';
       const sets = Number(card.querySelector('.entry-hold-sets')?.value) || 1;
       const seconds = Number(card.querySelector('.entry-hold-secs')?.value) || 0;
-      entries.push({ type: 'hold', exercise, sets, seconds });
+      const note = card.querySelector('.entry-note')?.value?.trim() || '';
+      entries.push({ type: 'hold', exercise, sets, seconds, note });
     }
   }
   return { entries, errors };
@@ -916,6 +1113,13 @@ $('#session-form').addEventListener('submit', async e => {
 
   const form = $('#session-form');
   const saveBtn = $('#session-form .btn-save');
+
+  if (!state.user) {
+    $('#form-error').textContent = 'Session expired. Please sign in again.';
+    showAuthDialog();
+    return;
+  }
+
   saveBtn.innerHTML = '<span class="spinner"></span> Saving…';
   saveBtn.disabled = true;
 
@@ -927,7 +1131,10 @@ $('#session-form').addEventListener('submit', async e => {
   };
 
   try {
-    await saveSessionToDb(session);
+    await Promise.race([
+      saveSessionToDb(session),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Save timed out. Please try again.')), 15000)),
+    ]);
     $('#session-dialog').close();
     renderAll();
     showToast(state.editingId ? 'Session updated!' : 'Session saved!', 'success');
@@ -974,14 +1181,45 @@ $('#sessions-list').addEventListener('click', e => {
 $('#detail-close').addEventListener('click', () => $('#detail-dialog').close());
 
 $$('.tab').forEach(tab => tab.addEventListener('click', () => {
+  if (!tab.dataset.target) return;
   $$('.tab').forEach(t => t.classList.remove('active'));
   $$('.view').forEach(v => v.classList.remove('active'));
   tab.classList.add('active');
-  $(`#${tab.dataset.target}`).classList.add('active');
+  const targetView = $(`#${tab.dataset.target}`);
+  if (!targetView) return;
+  targetView.classList.add('active');
   if (tab.dataset.target === 'dashboard-view') renderDashboard();
 }));
 
 $$('.btn-entry-add').forEach(btn => btn.addEventListener('click', () => addEntryCard(btn.dataset.entryType)));
+
+$('#profile-button').addEventListener('click', () => {
+  $('#profile-menu').classList.toggle('hidden');
+});
+
+$('#profile-settings-btn').addEventListener('click', () => {
+  $('#profile-menu').classList.add('hidden');
+  $('#display-name').value = state.profile.displayName || '';
+  $('#app-color').value = state.profile.color || 'sage';
+  $('#profile-dialog').showModal();
+});
+
+$('#profile-cancel').addEventListener('click', () => $('#profile-dialog').close());
+$('#profile-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const displayName = $('#display-name').value.trim() || 'Athlete';
+  const color = $('#app-color').value;
+  saveProfile({ displayName, color });
+  $('#profile-dialog').close();
+});
+
+$$('.range-tab').forEach(tab => tab.addEventListener('click', () => {
+  $$('.range-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  state.selectedRange = Number(tab.dataset.range);
+  renderDashboard();
+}));
+
 
 $$('.chart-tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -1003,8 +1241,22 @@ $$('.chart-tab').forEach(tab => {
 
 /* ─── Init ─── */
 resetForm();
-// Auth state change will trigger loadSessions + renderAll once session is detected.
-// Show auth immediately if no session exists yet.
-_supabase.auth.getSession().then(({ data: { session } }) => {
-  if (!session) showAuthDialog();
-});
+if (!USE_AUTH) {
+  state.user = { id: 'local-user', email: 'athlete@local.app' };
+  loadProfile();
+  loadSessions().then(renderAll);
+} else {
+  // Auth state change will trigger loadSessions + renderAll once session is detected.
+  // Show auth immediately if no session exists yet.
+  _supabase.auth.getSession().then(({ data: { session } }) => {
+  state.bootstrappedAuth = true;
+  if (session?.user) {
+    hydrateSignedInUser(session.user).catch(err => {
+      console.error(err);
+      resetSignedOutUser();
+    });
+  } else {
+    showAuthDialog();
+  }
+  });
+}
