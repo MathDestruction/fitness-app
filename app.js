@@ -326,7 +326,7 @@ function renderGoals(sessions) {
 
 /* ─── Stats ─── */
 function renderStats(filtered) {
-  // Distance
+  // Distance & Time (kept as-is)
   const runs = filtered.flatMap(s => s.entries.filter(e => e.type === 'cardio').map(e => ({ dist: calcDistance(e), dur: e.durationMin || 0 })));
   const totalDist = runs.reduce((a, r) => a + r.dist, 0);
   const totalMin = runs.reduce((a, r) => a + r.dur, 0);
@@ -334,29 +334,315 @@ function renderStats(filtered) {
   $('#stat-distance').textContent = totalDist > 0 ? totalDist.toFixed(1) : '-';
   $('#stat-time').textContent = totalMin > 0 ? `${hrs}:${String(mins).padStart(2, '0')}` : '-';
 
-  // Volume ring
-  const totalVol = filtered.reduce((a, s) => a + strengthVolume(s), 0);
-  const volEl = $('#stat-volume');
-  volEl.textContent = totalVol > 0 ? totalVol.toLocaleString() : '-';
-  const volGoal = Math.max(totalVol, 10000);
-  setRingProgress('#stat-volume-arc', totalVol / volGoal);
-  $('#stat-volume-label').textContent = totalVol > 0 ? `${(totalVol / 1000).toFixed(1)}k kg vol` : 'Total Volume';
-
-  // Best lift ring
-  let bestWeight = 0, bestEx = '';
-  filtered.forEach(s => s.entries.filter(e => e.type === 'strength').forEach(e => {
-    (e.sets || []).forEach(set => { if (set.weightKg > bestWeight) { bestWeight = set.weightKg; bestEx = e.exercise; } });
-  }));
-  $('#stat-bestlift').textContent = bestWeight > 0 ? `${bestWeight}` : '-';
-  const liftGoal = Math.max(bestWeight, 100);
-  setRingProgress('#stat-bestlift-arc', bestWeight / liftGoal);
-  $('#stat-bestlift-label').textContent = bestWeight > 0 ? `${bestEx}` : 'Best Lift';
+  // New premium visuals
+  renderMuscleBalance(filtered);
+  renderWeeklyLoad(filtered);
+  renderHeatmap(state.sessions); // always uses all sessions
+  renderRecovery(filtered);
 }
 
-function setRingProgress(sel, pct) {
-  const el = $(sel); if (!el) return;
-  const circ = 2 * Math.PI * 40;
-  el.setAttribute('stroke-dashoffset', circ * (1 - Math.min(1, pct)));
+/* ─── 1. Muscle Balance Donut ─── */
+function getExerciseCategory(entry) {
+  if (entry.type === 'cardio') return 'Cardio';
+  if (entry.type === 'hold') return 'Core';
+  const ex = EXERCISE_DB.strength.find(s => s.name.toLowerCase() === (entry.exercise || '').toLowerCase());
+  return ex ? ex.muscle : 'Other';
+}
+
+function renderMuscleBalance(filtered) {
+  const counts = {};
+  filtered.forEach(s => s.entries.forEach(e => {
+    const cat = getExerciseCategory(e);
+    counts[cat] = (counts[cat] || 0) + 1;
+  }));
+
+  const total = Object.values(counts).reduce((a, v) => a + v, 0);
+  if (total === 0) {
+    const legendEl = $('#muscle-balance-legend');
+    legendEl.innerHTML = '<span class="donut-legend-item" style="color:var(--muted)">No data yet</span>';
+    destroyChart('muscleBalance');
+    return;
+  }
+
+  const sortedEntries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const labels = sortedEntries.map(([k]) => k);
+  const data = sortedEntries.map(([, v]) => v);
+
+  const CATEGORY_COLORS = {
+    Cardio: '#60A5FA', Biceps: '#86C8A3', Triceps: '#72B691',
+    Back: '#5EA07D', Chest: '#4A8E6B', Shoulders: '#9DD6B5',
+    Legs: '#B4E2C8', Core: '#3D7A5A', Other: '#6b7f8e'
+  };
+  const colors = labels.map(l => CATEGORY_COLORS[l] || '#6b7f8e');
+
+  const canvas = $('#muscle-balance-chart');
+  createChart('muscleBalance', canvas, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors,
+        borderColor: 'rgba(18, 24, 29, 0.8)',
+        borderWidth: 2,
+        borderRadius: 4,
+        spacing: 2,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              const pct = ((ctx.parsed / total) * 100).toFixed(0);
+              return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Custom legend
+  const legendEl = $('#muscle-balance-legend');
+  legendEl.innerHTML = sortedEntries.map(([cat, count]) => {
+    const pct = ((count / total) * 100).toFixed(0);
+    const color = CATEGORY_COLORS[cat] || '#6b7f8e';
+    return `<div class="donut-legend-item"><span class="donut-legend-dot" style="background:${color}"></span>${cat} <span class="donut-legend-pct">${pct}%</span></div>`;
+  }).join('');
+}
+
+/* ─── 2. Weekly Load Progression ─── */
+function renderWeeklyLoad(filtered) {
+  // Group by day of week for the current/selected period
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const dayVolumes = new Array(7).fill(0);
+  const dayCounts = new Array(7).fill(0);
+
+  filtered.forEach(s => {
+    const dt = new Date(s.sessionDate + 'T00:00:00');
+    const dow = (dt.getDay() + 6) % 7; // Mon=0
+    const vol = strengthVolume(s);
+    const cardioLoad = s.entries.filter(e => e.type === 'cardio').reduce((a, e) => a + (e.durationMin || 0), 0);
+    dayVolumes[dow] += vol + (cardioLoad * 10); // weight cardio min * 10 for relative scale
+    dayCounts[dow]++;
+  });
+
+  const canvas = $('#weekly-load-chart');
+  const ctx = canvas.getContext('2d');
+  const h = canvas.parentElement?.clientHeight || 140;
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, 'rgba(134,200,163,0.5)');
+  grad.addColorStop(1, 'rgba(134,200,163,0.05)');
+
+  createChart('weeklyLoad', canvas, {
+    type: 'bar',
+    data: {
+      labels: dayNames,
+      datasets: [{
+        label: 'Load',
+        data: dayVolumes,
+        backgroundColor: grad,
+        borderColor: '#86C8A3',
+        borderWidth: 1,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              return ` Load: ${ctx.parsed.y.toLocaleString()}`;
+            },
+            afterLabel: function (ctx) {
+              return `Sessions: ${dayCounts[ctx.dataIndex]}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 } } },
+        y: { beginAtZero: true, ticks: { callback: v => v > 999 ? (v / 1000).toFixed(0) + 'k' : v } }
+      }
+    }
+  });
+}
+
+/* ─── 3. Consistency Heatmap ─── */
+function renderHeatmap(allSessions) {
+  const grid = $('#heatmap-grid');
+  grid.innerHTML = '';
+  const summaryEl = $('#heatmap-summary');
+
+  // Build a map of date -> session count
+  const dateCounts = {};
+  allSessions.forEach(s => {
+    dateCounts[s.sessionDate] = (dateCounts[s.sessionDate] || 0) + 1;
+  });
+
+  // Show last 12 weeks (84 days ending on today's week's Sunday)
+  const now = new Date();
+  const todayDow = (now.getDay() + 6) % 7; // Mon=0
+  // Start from 12 weeks ago Monday
+  const startDate = new Date(now.getTime() - (todayDow * dayMs) - (11 * 7 * dayMs));
+
+  const totalDays = 12 * 7;
+  let activeDays = 0;
+
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(startDate.getTime() + i * dayMs);
+    const key = d.toISOString().slice(0, 10);
+    const count = dateCounts[key] || 0;
+    if (count > 0) activeDays++;
+
+    const cell = document.createElement('div');
+    cell.className = 'heatmap-cell';
+
+    // Intensity levels
+    let level = 0;
+    if (count === 1) level = 1;
+    else if (count === 2) level = 2;
+    else if (count === 3) level = 3;
+    else if (count >= 4) level = 4;
+    cell.dataset.level = level;
+
+    // Today indicator
+    if (key === today) {
+      cell.style.outline = '1.5px solid var(--accent)';
+      cell.style.outlineOffset = '0px';
+    }
+
+    // Future days are dimmer
+    if (d > now) {
+      cell.style.opacity = '0.3';
+    }
+
+    cell.title = `${dateFmt(key)}: ${count} session${count !== 1 ? 's' : ''}`;
+    grid.appendChild(cell);
+  }
+
+  const weeks = 12;
+  const pct = ((activeDays / totalDays) * 100).toFixed(0);
+  summaryEl.textContent = `${activeDays}d / ${totalDays}d (${pct}%)`;
+}
+
+/* ─── 4. Volume & Recovery ─── */
+function renderRecovery(filtered) {
+  // Show volume per session over time, with rest-day gaps indicated
+  const sessions = [...filtered].sort((a, b) => a.sessionDate.localeCompare(b.sessionDate));
+  const statsEl = $('#recovery-stats');
+
+  if (sessions.length < 2) {
+    destroyChart('recovery');
+    statsEl.innerHTML = '<span class="recovery-stat-item"><span class="recovery-stat-label">Need more data</span><span class="recovery-stat-value">Log 2+ sessions</span></span>';
+    return;
+  }
+
+  const labels = sessions.map(s => dateFmtShort(s.sessionDate));
+  const volumes = sessions.map(s => strengthVolume(s));
+  const cardioMins = sessions.map(s => s.entries.filter(e => e.type === 'cardio').reduce((a, e) => a + (e.durationMin || 0), 0));
+
+  // Calculate rest days between sessions
+  const restDays = [];
+  for (let i = 1; i < sessions.length; i++) {
+    const d1 = new Date(sessions[i - 1].sessionDate + 'T00:00:00');
+    const d2 = new Date(sessions[i].sessionDate + 'T00:00:00');
+    restDays.push(Math.round((d2 - d1) / dayMs) - 1);
+  }
+  restDays.unshift(0);
+
+  const avgRest = restDays.length > 1 ? (restDays.slice(1).reduce((a, v) => a + v, 0) / (restDays.length - 1)).toFixed(1) : 0;
+  const avgVol = volumes.reduce((a, v) => a + v, 0) / volumes.length;
+  const lastVol = volumes[volumes.length - 1] || 0;
+  const volTrend = lastVol >= avgVol ? 'Up' : 'Down';
+
+  // Fatigue indicator: high volume + few rest days = high fatigue
+  let fatigueClass = 'recovery-good', fatigueLabel = 'Fresh';
+  if (avgRest < 1 && avgVol > 3000) { fatigueClass = 'recovery-high'; fatigueLabel = 'High Load'; }
+  else if (avgRest < 2 && avgVol > 2000) { fatigueClass = 'recovery-moderate'; fatigueLabel = 'Moderate'; }
+
+  const canvas = $('#recovery-chart');
+  const ctx = canvas.getContext('2d');
+  const h = canvas.parentElement?.clientHeight || 120;
+  const volGrad = ctx.createLinearGradient(0, 0, 0, h);
+  volGrad.addColorStop(0, 'rgba(134,200,163,0.35)');
+  volGrad.addColorStop(1, 'rgba(134,200,163,0.02)');
+
+  createChart('recovery', canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Volume (kg)',
+          data: volumes,
+          borderColor: '#86C8A3',
+          backgroundColor: volGrad,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: '#86C8A3',
+          pointBorderColor: '#12181D',
+          pointBorderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Rest Days',
+          data: restDays,
+          borderColor: 'rgba(96, 165, 250, 0.6)',
+          backgroundColor: 'transparent',
+          borderDash: [4, 4],
+          tension: 0.3,
+          pointBackgroundColor: '#60A5FA',
+          pointBorderColor: '#12181D',
+          pointBorderWidth: 2,
+          pointRadius: 2,
+          pointHoverRadius: 4,
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { boxWidth: 8, padding: 8, font: { size: 10 } } },
+        tooltip: {
+          callbacks: {
+            afterBody: function (items) {
+              const idx = items[0]?.dataIndex;
+              if (idx !== undefined && cardioMins[idx] > 0) {
+                return `Cardio: ${cardioMins[idx]} min`;
+              }
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { maxRotation: 0, font: { size: 9 } } },
+        y: { position: 'left', beginAtZero: true, ticks: { callback: v => v > 999 ? (v / 1000).toFixed(0) + 'k' : v, font: { size: 9 } } },
+        y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { font: { size: 9 }, callback: v => v + 'd' } }
+      }
+    }
+  });
+
+  statsEl.innerHTML = `
+    <div class="recovery-stat-item"><span class="recovery-stat-label">Avg Rest</span><span class="recovery-stat-value">${avgRest} days</span></div>
+    <div class="recovery-stat-item"><span class="recovery-stat-label">Trend</span><span class="recovery-stat-value">${volTrend === 'Up' ? '📈' : '📉'} ${volTrend}</span></div>
+    <div class="recovery-stat-item"><span class="recovery-stat-label">Fatigue</span><span class="recovery-stat-value ${fatigueClass}">${fatigueLabel}</span></div>
+  `;
 }
 
 /* ─── Running Chart (gradient area) ─── */
