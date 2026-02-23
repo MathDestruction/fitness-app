@@ -184,6 +184,7 @@ function showToast(msg, type = 'success') {
 let _authMode = 'login';
 
 function showAuthDialog() {
+  if (!USE_AUTH) return;
   const dlg = $('#auth-dialog');
   if (!dlg.open) dlg.showModal();
 }
