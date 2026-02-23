@@ -57,7 +57,6 @@ const state = {
   activeRunChart: 'run-distance',
   selectedRange: 7,
   profile: { displayName: 'Athlete', color: 'sage' },
-  bootstrappedAuth: false,
 };
 
 const DEMO_SESSIONS = [
@@ -277,17 +276,9 @@ function resetSignedOutUser() {
   showAuthDialog();
 }
 
-_supabase.auth.onAuthStateChange(async (event, session) => {
-  if (!USE_AUTH) return;
-  if (session?.user) {
-    await hydrateSignedInUser(session.user);
-    return;
-  }
-
-  // Ignore transient null-session events once a user is already hydrated,
-  // unless this is an explicit sign-out.
-  if (state.user && event !== 'SIGNED_OUT') return;
-  resetSignedOutUser();
+_supabase.auth.onAuthStateChange(async (_event, session) => {
+  if (session?.user) await hydrateSignedInUser(session.user);
+  else resetSignedOutUser();
 });
 
 function capitalise(str) {
@@ -1241,14 +1232,6 @@ resetForm();
 // Auth state change will trigger loadSessions + renderAll once session is detected.
 // Show auth immediately if no session exists yet.
 _supabase.auth.getSession().then(({ data: { session } }) => {
-  if (!USE_AUTH) {
-    state.user = { id: 'local-user', email: 'athlete@local.app' };
-    hideAuthDialog();
-    loadProfile();
-    loadSessions().then(renderAll);
-    return;
-  }
-  state.bootstrappedAuth = true;
   if (session?.user) {
     hydrateSignedInUser(session.user).catch(err => {
       console.error(err);
