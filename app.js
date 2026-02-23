@@ -1230,15 +1230,25 @@ $$('.chart-tab').forEach(tab => {
 
 /* ─── Init ─── */
 resetForm();
-// Auth state change will trigger loadSessions + renderAll once session is detected.
-// Show auth immediately if no session exists yet.
-_supabase.auth.getSession().then(({ data: { session } }) => {
-  if (session?.user) {
-    hydrateSignedInUser(session.user).catch(err => {
-      console.error(err);
-      resetSignedOutUser();
-    });
+
+async function initApp() {
+  if (!USE_AUTH) {
+    await loadSessions();
+    renderAll();
   } else {
-    showAuthDialog();
+    try {
+      const { data: { session } } = await _supabase.auth.getSession();
+      if (session?.user) {
+        await hydrateSignedInUser(session.user);
+      } else {
+        showAuthDialog();
+      }
+    } catch (err) {
+      console.error('Init failed:', err);
+      showAuthDialog();
+    }
   }
-});
+}
+
+initApp();
+
