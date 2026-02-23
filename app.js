@@ -5,6 +5,8 @@
 
 /* ─── Supabase Client ─── */
 const _supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON);
+const USE_AUTH = false;
+const LOCAL_SESSIONS_KEY = 'fitness_sessions_local_v1';
 
 /* ─── Constants ─── */
 const MUSCLES = ['Biceps', 'Triceps', 'Back', 'Chest', 'Shoulders', 'Legs', 'Core'];
@@ -56,6 +58,46 @@ const state = {
   selectedRange: 7,
   profile: { displayName: 'Athlete', color: 'sage' },
 };
+
+const DEMO_SESSIONS = [
+  {
+    id: 'demo-1',
+    sessionDate: '2026-02-21',
+    weightKg: 82.4,
+    notes: 'Great energy today',
+    entries: [
+      { type: 'cardio', exercise: 'Run', durationMin: 15, speedKmh: 9, distanceKm: 2.25, note: '' },
+      { type: 'hold', exercise: 'Plank', sets: 2, seconds: 60, note: '' },
+      { type: 'strength', exercise: 'Seated Row', muscle: 'Back', sets: [{ weightKg: 29, reps: 10 }, { weightKg: 29, reps: 8 }, { weightKg: 29, reps: 6 }], note: '' },
+      { type: 'strength', exercise: 'Bicep Curl', muscle: 'Biceps', sets: [{ weightKg: 32, reps: 10 }, { weightKg: 32, reps: 8 }, { weightKg: 32, reps: 6 }], note: '' },
+    ],
+  },
+  {
+    id: 'demo-2',
+    sessionDate: '2026-02-19',
+    weightKg: 82.8,
+    notes: '',
+    entries: [
+      { type: 'strength', exercise: 'Lat Pulldown', muscle: 'Back', sets: [{ weightKg: 43, reps: 10 }, { weightKg: 43, reps: 8 }, { weightKg: 43, reps: 6 }], note: '' },
+      { type: 'strength', exercise: 'Tricep Pushdown', muscle: 'Triceps', sets: [{ weightKg: 45, reps: 10 }, { weightKg: 40, reps: 8 }, { weightKg: 40, reps: 6 }], note: '' },
+      { type: 'strength', exercise: 'Bicep Curl', muscle: 'Biceps', sets: [{ weightKg: 36, reps: 10 }, { weightKg: 36, reps: 8 }, { weightKg: 36, reps: 6 }], note: '' },
+    ],
+  },
+  {
+    id: 'demo-3',
+    sessionDate: '2026-02-17',
+    weightKg: 83.1,
+    notes: '',
+    entries: [
+      { type: 'cardio', exercise: 'Run', durationMin: 36, distanceKm: 5, speedKmh: 8, note: '' },
+      { type: 'strength', exercise: 'Chest Press', muscle: 'Chest', sets: [{ weightKg: 29, reps: 10 }, { weightKg: 29, reps: 8 }, { weightKg: 29, reps: 6 }], note: '' },
+    ],
+  },
+];
+
+function saveLocalSessions() {
+  localStorage.setItem(LOCAL_SESSIONS_KEY, JSON.stringify(state.sessions));
+}
 
 /* ─── DOM Helpers ─── */
 const $ = (s, root = document) => root.querySelector(s);
@@ -175,6 +217,7 @@ $$('.auth-tab').forEach(t => t.addEventListener('click', () => setAuthMode(t.dat
 wireAuthSwitch();
 
 $('#auth-form').addEventListener('submit', async e => {
+  if (!USE_AUTH) return;
   e.preventDefault();
   const email = $('#auth-email').value.trim();
   const password = $('#auth-password').value;
@@ -243,6 +286,10 @@ function capitalise(str) {
 }
 
 $('#logout-btn').addEventListener('click', async () => {
+  if (!USE_AUTH) {
+    showToast('Auth disabled in local mode.', 'success');
+    return;
+  }
   await _supabase.auth.signOut();
 });
 
@@ -293,6 +340,21 @@ function rowsToSession(sessionRow, entryRows, strengthRows) {
 }
 
 async function loadSessions() {
+  if (!USE_AUTH) {
+    const raw = localStorage.getItem(LOCAL_SESSIONS_KEY);
+    if (raw) {
+      try {
+        state.sessions = JSON.parse(raw);
+      } catch (_err) {
+        state.sessions = JSON.parse(JSON.stringify(DEMO_SESSIONS));
+        saveLocalSessions();
+      }
+    } else {
+      state.sessions = JSON.parse(JSON.stringify(DEMO_SESSIONS));
+      saveLocalSessions();
+    }
+    return;
+  }
   if (!state.user) return;
 
   // Fetch sessions
@@ -333,6 +395,19 @@ async function loadSessions() {
 }
 
 async function saveSessionToDb(session) {
+  if (!USE_AUTH) {
+    const payload = {
+      ...session,
+      id: state.editingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
+    };
+    if (state.editingId) {
+      state.sessions = state.sessions.map(s => s.id === state.editingId ? payload : s);
+    } else {
+      state.sessions.push(payload);
+    }
+    saveLocalSessions();
+    return;
+  }
   const isEdit = !!state.editingId;
 
   if (isEdit) {
@@ -414,6 +489,11 @@ async function insertEntries(sessionId, entries) {
 }
 
 async function deleteSessionFromDb(id) {
+  if (!USE_AUTH) {
+    state.sessions = state.sessions.filter(s => s.id !== id);
+    saveLocalSessions();
+    return;
+  }
   // Cascade handles entries + strength_sets
   const { error } = await _supabase.from('sessions').delete().eq('id', id);
   if (error) throw error;
@@ -1021,6 +1101,13 @@ $('#session-form').addEventListener('submit', async e => {
 
   const form = $('#session-form');
   const saveBtn = $('#session-form .btn-save');
+
+  if (!state.user) {
+    $('#form-error').textContent = 'Session expired. Please sign in again.';
+    showAuthDialog();
+    return;
+  }
+
   saveBtn.innerHTML = '<span class="spinner"></span> Saving…';
   saveBtn.disabled = true;
 
@@ -1032,7 +1119,10 @@ $('#session-form').addEventListener('submit', async e => {
   };
 
   try {
-    await saveSessionToDb(session);
+    await Promise.race([
+      saveSessionToDb(session),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Save timed out. Please try again.')), 15000)),
+    ]);
     $('#session-dialog').close();
     renderAll();
     showToast(state.editingId ? 'Session updated!' : 'Session saved!', 'success');
