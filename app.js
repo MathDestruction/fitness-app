@@ -3,7 +3,6 @@
    ════════════════════════════════════════════════════════════ */
 const _supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON);
 window._supabase = _supabase;
-window._state = state;
 
 const MUSCLES = ['Biceps', 'Triceps', 'Back', 'Chest', 'Shoulders', 'Legs', 'Core'];
 const MUSCLE_COLORS = { Biceps: '#86C8A3', Triceps: '#72B691', Back: '#5EA07D', Chest: '#4A8E6B', Shoulders: '#9DD6B5', Legs: '#B4E2C8', Core: '#3D7A5A' };
