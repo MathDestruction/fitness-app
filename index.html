@@ -11,11 +11,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=2" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
     window.SUPABASE_URL = 'https://mdxytxalmxcysagpwzdd.supabase.co';
     window.SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1keHl0eGFsbXhjeXNhZ3B3emRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NDYzMTksImV4cCI6MjA4NzMyMjMxOX0.XNC9Q9lbuMa6CerRA8uFoGqw83yD5IVhBorYtugArtg';
+    // Dev credentials - populate these to enable the Dev Login button
+    window.DEV_EMAIL = 'mvanniekerk19@gmail.com';
+    window.DEV_PASSWORD = 'Popsickle';
   </script>
 </head>
 
@@ -62,9 +65,9 @@
         </div>
         <!-- col 3: Longest Streak -->
         <div class="goal-item">
-          <span class="goal-title">Longest Streak</span>
+          <span class="goal-title">Weekly Streak</span>
           <div class="goal-streak" id="goal-streak"><span class="goal-streak-icon">🔥</span><span
-              class="goal-streak-num">0</span><span class="goal-streak-unit">days</span></div>
+              class="goal-streak-num">0</span><span class="goal-streak-unit">weeks</span></div>
         </div>
       </div>
     </section>
@@ -270,6 +273,8 @@
             autocomplete="current-password" /></label>
         <p id="auth-error" class="error"></p>
         <button type="submit" id="auth-submit" class="btn-accent" style="width:100%;">Sign In</button>
+        <button type="button" id="dev-login-btn" class="btn-dev" style="width:100%; margin-top: 8px;">Dev Login
+          (Bypass)</button>
       </form>
       <p class="auth-footer" id="auth-footer">Don't have an account? <a href="#" id="auth-switch">Sign up</a></p>
     </div>
@@ -310,7 +315,7 @@
   </datalist>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
 </body>
 
 </html>

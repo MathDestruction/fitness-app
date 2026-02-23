@@ -2,6 +2,8 @@
    Fitness Tracker — App Logic (Redesigned)
    ════════════════════════════════════════════════════════════ */
 const _supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON);
+window._supabase = _supabase;
+window._state = state;
 
 const MUSCLES = ['Biceps', 'Triceps', 'Back', 'Chest', 'Shoulders', 'Legs', 'Core'];
 const MUSCLE_COLORS = { Biceps: '#86C8A3', Triceps: '#72B691', Back: '#5EA07D', Chest: '#4A8E6B', Shoulders: '#9DD6B5', Legs: '#B4E2C8', Core: '#3D7A5A' };
@@ -35,14 +37,23 @@ const capitalise = s => s.charAt(0).toUpperCase() + s.slice(1);
 function profileKey() { return state.user ? `fitness_profile_${state.user.id}` : ''; }
 
 function loadProfile() {
-  if (!state.user) return;
+  if (!state.user) return false;
   const raw = localStorage.getItem(profileKey());
-  if (raw) { try { state.profile = { ...state.profile, ...JSON.parse(raw) }; } catch (_) { localStorage.removeItem(profileKey()); } }
+  if (raw) {
+    try {
+      state.profile = { ...state.profile, ...JSON.parse(raw) };
+      applyThemeColor(state.profile.color || 'sage');
+      const name = state.profile.displayName || 'Athlete';
+      $('#welcome-title').textContent = `Hi, ${name}!`;
+      const el = $('#avatar-circle');
+      if (el) el.textContent = name[0].toUpperCase();
+      return true;
+    } catch (_) {
+      localStorage.removeItem(profileKey());
+    }
+  }
   applyThemeColor(state.profile.color || 'sage');
-  const name = state.profile.displayName || 'Athlete';
-  $('#welcome-title').textContent = `Hi, ${name}!`;
-  const el = $('#avatar-circle');
-  if (el) el.textContent = name[0].toUpperCase();
+  return false;
 }
 
 function saveProfile(p) { state.profile = { ...state.profile, ...p }; localStorage.setItem(profileKey(), JSON.stringify(state.profile)); loadProfile(); }
@@ -108,12 +119,22 @@ async function hydrateSignedInUser(u) {
   if (_hydrated && state.user?.id === u.id) return;
   _hydrated = true; state.user = u; hideAuthDialog();
   state.profile.displayName = capitalise(u.email.split('@')[0]);
-  loadProfile(); maybeOpenProfileSetup();
+  const hasProfile = loadProfile();
+  if (!hasProfile) maybeOpenProfileSetup();
   await loadSessions(); renderAll();
 }
 function resetSignedOutUser() { _hydrated = false; state.user = null; state.sessions = []; destroyAllCharts(); showAuthDialog(); }
 _supabase.auth.onAuthStateChange(async (_, s) => { if (s?.user) await hydrateSignedInUser(s.user); else resetSignedOutUser(); });
 $('#logout-btn').addEventListener('click', async () => { await _supabase.auth.signOut(); });
+
+$('#dev-login-btn').addEventListener('click', async () => {
+  const email = window.DEV_EMAIL, password = window.DEV_PASSWORD, errEl = $('#auth-error'), btn = $('#dev-login-btn');
+  if (!email || !password) { errEl.textContent = 'Dev credentials not set in index.html'; return; }
+  btn.innerHTML = '<span class="spinner"></span> Bypassing…'; btn.disabled = true; errEl.textContent = '';
+  const { error } = await window._supabase.auth.signInWithPassword({ email, password });
+  btn.innerHTML = 'Dev Login (Bypass)'; btn.disabled = false;
+  if (error) { errEl.style.color = 'var(--danger)'; errEl.textContent = error.message; }
+});
 
 /* ═══ SUPABASE DATA LAYER ═══ */
 function rowsToSession(sRow, eRows, ssRows) {
@@ -271,13 +292,37 @@ function renderGoals(sessions) {
     arcEl.setAttribute('stroke', best5.dur <= target ? '#4ADE80' : '#c2a700');
   } else { timeEl.textContent = '-'; }
 
-  // Longest streak
-  const dates = new Set(sessions.map(s => s.sessionDate));
-  let streak = 0, cur = new Date(today);
-  if (!dates.has(today)) cur = new Date(cur.getTime() - dayMs);
-  while (dates.has(cur.toISOString().slice(0, 10))) { streak++; cur = new Date(cur.getTime() - dayMs); }
+  // Consecutive weekly streaks (how many weeks in a row had ≥3 sessions)
+  function getWeekMonday(d) {
+    const dt = new Date(d + 'T00:00:00');
+    const dow = (dt.getDay() + 6) % 7; // Mon=0
+    dt.setDate(dt.getDate() - dow);
+    return dt.toISOString().slice(0, 10);
+  }
+  // Build a map of weekMonday -> sessionCount
+  const weekCounts = new Map();
+  sessions.forEach(s => {
+    const wk = getWeekMonday(s.sessionDate);
+    weekCounts.set(wk, (weekCounts.get(wk) || 0) + 1);
+  });
+  // Walk backwards week by week from the last completed week
+  const nowDt = new Date();
+  const curDow = (nowDt.getDay() + 6) % 7;
+  // Start from previous Monday (skip current partial week)
+  let checkDt = new Date(nowDt.getTime() - curDow * dayMs - 7 * dayMs);
+  let weekStreak = 0;
+  for (let i = 0; i < 52; i++) {
+    const wkKey = checkDt.toISOString().slice(0, 10);
+    if ((weekCounts.get(wkKey) || 0) >= 3) {
+      weekStreak++;
+      checkDt = new Date(checkDt.getTime() - 7 * dayMs);
+    } else break;
+  }
   const sn = $('#goal-streak .goal-streak-num');
-  if (sn) sn.textContent = streak;
+  if (sn) sn.textContent = weekStreak;
+  // Update label to say "weeks"
+  const su = $('#goal-streak .goal-streak-unit');
+  if (su) su.textContent = 'weeks';
 }
 
 /* ─── Stats ─── */
