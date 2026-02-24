@@ -149,7 +149,7 @@ function rowsToSession(sRow, eRows, ssRows) {
     }
     return { ...base, sets: e.hold_sets ?? 1, seconds: e.hold_seconds_per_set ?? 0 };
   });
-  return { id: sRow.id, sessionDate: sRow.session_date, weightKg: Number(sRow.weight_kg), notes: sRow.notes || '', entries };
+  return { id: sRow.id, sessionDate: sRow.session_date, weightKg: sRow.weight_kg != null ? Number(sRow.weight_kg) : null, notes: sRow.notes || '', entries };
 }
 
 async function loadSessions() {
@@ -737,8 +737,8 @@ function renderRecovery(filtered) {
 
 /* ─── Running Chart (gradient area) ─── */
 function renderRunningAnalytics(sessions) {
-  const runs = sessions.map(s => ({ s, e: s.entries.find(e => e.type === 'cardio') })).filter(x => x.e)
-    .map(({ s, e }) => ({ date: s.sessionDate, dist: calcDistance(e), speed: calcSpeed(e), duration: e.durationMin || 0, exercise: e.exercise }));
+  const runs = sessions.flatMap(s => s.entries.filter(e => e.type === 'cardio' && /run|jog|sprint|treadmill/i.test(e.exercise || ''))
+    .map(e => ({ date: s.sessionDate, dist: calcDistance(e), speed: calcSpeed(e), duration: e.durationMin || 0, exercise: e.exercise })));
   const latestRun = runs[runs.length - 1];
   const statEl = $('#run-chart-stat');
   if (statEl) statEl.textContent = latestRun ? `${latestRun.speed.toFixed(1)} km/h` : '';
@@ -820,7 +820,8 @@ function renderSessions() {
     const types = [...new Set(s.entries.map(e => e.type))];
     const emoji = { cardio: '🏃', strength: '💪', hold: '🧘' };
     const tags = types.map(t => `<span class="session-tag">${emoji[t] || ''} ${t}</span>`).join('');
-    return `<li class="session-row" data-session-id="${s.id}"><div><div class="session-date">${dateFmt(s.sessionDate)}</div><div class="session-meta">${s.weightKg} kg · ${s.entries.length} exercise${s.entries.length !== 1 ? 's' : ''}${s.notes ? ' · ' + s.notes : ''}</div><div class="session-tags">${tags}</div></div><span class="session-arrow">›</span></li>`;
+    const weightText = s.weightKg != null ? `${s.weightKg} kg · ` : '';
+    return `<li class="session-row" data-session-id="${s.id}"><div><div class="session-date">${dateFmt(s.sessionDate)}</div><div class="session-meta">${weightText}${s.entries.length} exercise${s.entries.length !== 1 ? 's' : ''}${s.notes ? ' · ' + s.notes : ''}</div><div class="session-tags">${tags}</div></div><span class="session-arrow">›</span></li>`;
   }).join('');
 }
 
@@ -828,7 +829,7 @@ function renderSessions() {
 function showSessionDetail(id) {
   const s = state.sessions.find(x => x.id === id); if (!s) return;
   const body = $('#detail-body'), vol = strengthVolume(s);
-  let html = `<div class="detail-meta"><div class="detail-meta-item"><span class="detail-meta-label">Date</span><span class="detail-meta-value">${dateFmt(s.sessionDate)}</span></div><div class="detail-meta-item"><span class="detail-meta-label">Weight</span><span class="detail-meta-value">${s.weightKg} kg</span></div>${vol ? `<div class="detail-meta-item"><span class="detail-meta-label">Total Volume</span><span class="detail-meta-value">${vol.toLocaleString()} kg</span></div>` : ''}</div>${s.notes ? `<div style="color:var(--muted);font-size:0.85rem;font-style:italic;">"${s.notes}"</div>` : ''}`;
+  let html = `<div class="detail-meta"><div class="detail-meta-item"><span class="detail-meta-label">Date</span><span class="detail-meta-value">${dateFmt(s.sessionDate)}</span></div>` + (s.weightKg != null ? `<div class="detail-meta-item"><span class="detail-meta-label">Weight</span><span class="detail-meta-value">${s.weightKg} kg</span></div>` : '') + `${vol ? `<div class="detail-meta-item"><span class="detail-meta-label">Total Volume</span><span class="detail-meta-value">${vol.toLocaleString()} kg</span></div>` : ''}</div>${s.notes ? `<div style="color:var(--muted);font-size:0.85rem;font-style:italic;">"${s.notes}"</div>` : ''}`;
   for (const e of s.entries) {
     const icon = { cardio: '🏃', strength: '💪', hold: '🧘' }[e.type];
     html += `<div class="detail-entry"><div class="detail-entry-title">${icon} ${e.exercise}</div>`;
@@ -890,7 +891,7 @@ function resetForm() { $('#session-form').reset(); $('#session-form').sessionDat
 function openForEdit(id) {
   const s = state.sessions.find(x => x.id === id); if (!s) return;
   resetForm(); state.editingId = id; $('#dialog-title').textContent = 'Edit Session'; $('#delete-btn').classList.remove('hidden');
-  const f = $('#session-form'); f.sessionDate.value = s.sessionDate; f.weightKg.value = s.weightKg; f.notes.value = s.notes || '';
+  const f = $('#session-form'); f.sessionDate.value = s.sessionDate; f.weightKg.value = s.weightKg != null ? s.weightKg : ''; f.notes.value = s.notes || '';
   for (const e of s.entries) addEntryCard(e.type, e);
   $('#session-dialog').showModal();
 }
@@ -926,7 +927,8 @@ $('#session-form').addEventListener('submit', async e => {
   const saveBtn = $('#session-form .btn-save');
   saveBtn.innerHTML = '<span class="spinner"></span> Saving…'; saveBtn.disabled = true;
   try {
-    await saveSessionToDb({ sessionDate: $('#session-form').sessionDate.value, weightKg: Number($('#session-form').weightKg.value), notes: $('#session-form').notes.value || '', entries });
+    const wVal = $('#session-form').weightKg.value;
+    await saveSessionToDb({ sessionDate: $('#session-form').sessionDate.value, weightKg: wVal !== '' ? Number(wVal) : null, notes: $('#session-form').notes.value || '', entries });
     $('#session-dialog').close(); renderAll();
     showToast(state.editingId ? 'Session updated!' : 'Session saved!', 'success');
   } catch (err) { $('#form-error').textContent = err.message || 'Save failed. Please try again.'; console.error(err); }
@@ -984,8 +986,8 @@ $$('.chart-tab').forEach(tab => tab.addEventListener('click', () => {
   $$('.chart-tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
   state.activeRunChart = tab.dataset.chart;
-  const runs = sortedSessions().map(s => ({ s, e: s.entries.find(e => e.type === 'cardio') })).filter(x => x.e)
-    .map(({ s, e }) => ({ date: s.sessionDate, dist: calcDistance(e), speed: calcSpeed(e), duration: e.durationMin || 0, exercise: e.exercise }));
+  const runs = sortedSessions().flatMap(s => s.entries.filter(e => e.type === 'cardio' && /run|jog|sprint|treadmill/i.test(e.exercise || ''))
+    .map(e => ({ date: s.sessionDate, dist: calcDistance(e), speed: calcSpeed(e), duration: e.durationMin || 0, exercise: e.exercise })));
   drawRunChart(runs, state.activeRunChart);
 }));
 
