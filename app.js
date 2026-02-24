@@ -1,7 +1,11 @@
 /* ════════════════════════════════════════════════════════════
    Fitness Tracker — App Logic (Redesigned)
    ════════════════════════════════════════════════════════════ */
-const _supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON);
+const _supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON, {
+  auth: {
+    lock: (name, acquire) => acquire()
+  }
+});
 window._supabase = _supabase;
 
 const MUSCLES = ['Biceps', 'Triceps', 'Back', 'Chest', 'Shoulders', 'Legs', 'Core'];
