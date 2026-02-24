@@ -1,36 +1,9 @@
-- On user login, hide login screen
-- On user login, next step would be to ask user display name and app color preference (sage green, electric blue)
-- for now, just use a placeholder for any user profile image
+[DONE] - Need to be able float values for time (Eg, 37.40) → Duration input now accepts decimals (step=0.01), detail view shows decimal values
+[DONE] - Goals element still becoming vertical on my screen → Breakpoint lowered to 320px, added min-width:0 overflow protection to prevent grid blowout
+[DONE] - On page refresh, info/data is lost with loading showing → Auth state handler now only resets on explicit SIGNED_OUT event; init error handling shows data instead of resetting to login
+[DONE] - Site should also remember users Display name and theme preference once initially set → Already persists via localStorage per user, verified load order is correct
+[DONE] - Any sessions logged on the same day should remain separate sessions in the database, but should all contribute to the same daily values → Weekly Sessions goal counts unique dates, all stats naturally sum across all sessions per date
+[DONE] - On the goals element, the fastest 5km should be reached once i get under 30min → Progress ring now uses 60→30 min scale (0%→100%); ring goes green at ≤30 min
+[DONE] - tool tips/info displayed after tapping on a graph or chart should remain for several seconds before fading, or in another part of the screen is tapped → Chart.js stickyTooltip plugin: tooltips persist ~4s on tap, dismissed on outside click
+[DONE] - For the consistency visualizer, lets reduce the size considerably. It should be a short section (low height) but its width can span the width of the screen/block element → Heatmap cells reduced from 14px squares to 8px-tall rectangles with tighter gaps
 
-Top section
-- Lets redesign this top section, using @reference/top-section.png as a reference
-- Remove Logout button from this area, as well as Add Session button
-- Add the users profile too the top left of the screen. Add logout option o this section when the user taps their profile image/icon
-- Below this can be a bright block with the Welcome message and last session details.
-- To the right of this block, we will add an avatar (use references/avatar.png as a placeholder)
-
-- Directly below the user greeting, there should be calendar section. Use @reference/calendar.png as a reference
-- This should highlight the days i have done to gym
-
-- Add session button should be added to the bottom of the screen, the docked menu. This button should be in the middle with a plus icon
-
-Add session from:
-- This popup menu needs to be centre aligned
-- Under cardio, when selecting "exercise", it should open a list of expected exercises (Walk, Run, Row) while also allowing for custom text
-- Under cardio, Duration, distance and speed could be grouped closer to save space. These could also be scrollable "wheel" elements. With an optional tap to enter manually (look at @reference/scrollWhellPrompt.txt for an example)
-- Add Note to section
-- Under Strength, Same thing with selecting exercises
-- Reps should also be a dropdown list of 3 sections (Eg, 10/8/6). As in Each set will have mutliple Reps
-- Also add note section
-- Under Hold, same thing with selecting exercises
-- under Hold, sets and time can also be scrollable "wheel" elements
-
-Dashboard:
-- Graphs should have selectable 30/7/1 day options
-- Weight graph doesnt need to display numbers, just 2 lines. One for day to day weight and another for  average. Tapping a point will display the value and the SD
-
-At the very bottom of the app, the login page is still visible as its own section. This should be hidden/removed
-
-In place of this, can be a list of multiple horizontal tabs/blocks showing each exercise (bisep curls, rowing, etc). Each tab will display the last time i did one of these exercises.
-They will be color coded with a tab getting progressivly more red the longer it has been since i did it
-The tab will also show the last weight (and reps) or duration i did for this exercise

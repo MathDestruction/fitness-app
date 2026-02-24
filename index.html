@@ -137,7 +137,7 @@
           </div>
         </div>
 
-        <!-- 3. Consistency Heatmap -->
+        <!-- 3. Contribution Graph -->
         <div class="premium-stat-card premium-stat-card-wide">
           <div class="premium-stat-head">
             <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
@@ -148,10 +148,7 @@
             <span>Consistency</span>
             <span class="premium-stat-sub" id="heatmap-summary"></span>
           </div>
-          <div class="heatmap-wrap" id="heatmap-grid"></div>
-          <div class="heatmap-labels">
-            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-          </div>
+          <div class="contribution-graph" id="contribution-graph"></div>
         </div>
 
         <!-- 4. Volume & Recovery -->
@@ -299,7 +296,11 @@
       <h3 id="detail-title">Session Detail</h3><button type="button" id="detail-close" class="btn-icon-close">✕</button>
     </div>
     <div id="detail-body" class="detail-body"></div>
-    <div class="dialog-actions"><button type="button" id="detail-edit" class="btn-accent">Edit Session</button></div>
+    <div class="dialog-actions">
+      <button type="button" id="detail-delete" class="btn-danger">Delete</button>
+      <div class="dialog-actions-right"><button type="button" id="detail-edit" class="btn-accent">Edit Session</button>
+      </div>
+    </div>
   </dialog>
 
   <dialog id="auth-dialog" class="auth-dialog">

@@ -123,7 +123,10 @@ async function hydrateSignedInUser(u) {
   await loadSessions(); renderAll();
 }
 function resetSignedOutUser() { _hydrated = false; state.user = null; state.sessions = []; destroyAllCharts(); showAuthDialog(); }
-_supabase.auth.onAuthStateChange(async (_, s) => { if (s?.user) await hydrateSignedInUser(s.user); else resetSignedOutUser(); });
+_supabase.auth.onAuthStateChange(async (event, s) => {
+  if (s?.user) { try { await hydrateSignedInUser(s.user); } catch (err) { console.error('Hydrate failed:', err); renderAll(); } }
+  else if (event === 'SIGNED_OUT') resetSignedOutUser();
+});
 $('#logout-btn').addEventListener('click', async () => { await _supabase.auth.signOut(); });
 
 $('#dev-login-btn').addEventListener('click', async () => {
@@ -214,6 +217,25 @@ Chart.defaults.plugins.tooltip.borderWidth = 1; Chart.defaults.plugins.tooltip.p
 Chart.defaults.plugins.tooltip.cornerRadius = 8;
 Chart.defaults.scale.grid = { color: 'rgba(30,42,49,0.5)', drawBorder: false };
 
+/* ═══ Sticky Tooltip Plugin (tooltips persist ~4s on tap) ═══ */
+Chart.register({
+  id: 'stickyTooltip',
+  beforeEvent(chart, args) {
+    const evt = args.event;
+    if (evt.type === 'click') {
+      clearTimeout(chart.__stickyTimer);
+      chart.__tooltipPinned = true;
+      chart.__stickyTimer = setTimeout(() => {
+        chart.__tooltipPinned = false;
+        if (chart.tooltip) { chart.tooltip.setActiveElements([], { x: 0, y: 0 }); chart.update('none'); }
+      }, 4000);
+    }
+    if (chart.__tooltipPinned && (evt.type === 'mouseout' || evt.type === 'pointerleave')) {
+      return false;
+    }
+  }
+});
+
 function destroyChart(k) { if (state.charts[k]) { state.charts[k].destroy(); state.charts[k] = null; } }
 function destroyAllCharts() { Object.keys(state.charts).forEach(destroyChart); }
 function createChart(k, ctx, c) { destroyChart(k); state.charts[k] = new Chart(ctx, c); }
@@ -274,7 +296,8 @@ function renderGoals(sessions) {
   // Weekly sessions (Mon-Sun of current week)
   const now = new Date(), dow = (now.getDay() + 6) % 7;
   const monDate = new Date(now.getTime() - dow * dayMs).toISOString().slice(0, 10);
-  const weekSessions = sessions.filter(s => s.sessionDate >= monDate).length;
+  const weekDates = new Set(sessions.filter(s => s.sessionDate >= monDate).map(s => s.sessionDate));
+  const weekSessions = weekDates.size;
   const numEl = $('#goal-sessions .goal-num');
   if (numEl) numEl.textContent = weekSessions;
 
@@ -285,7 +308,7 @@ function renderGoals(sessions) {
   const timeEl = $('#goal-5k-time'), arcEl = $('#goal-5k-arc');
   if (best5) {
     timeEl.textContent = `${Math.round(best5.dur)}min`;
-    const pct = Math.min(1, target / best5.dur);
+    const pct = Math.min(1, Math.max(0, (60 - best5.dur) / (60 - target)));
     const circ = 2 * Math.PI * 34;
     arcEl.setAttribute('stroke-dashoffset', circ * (1 - pct));
     arcEl.setAttribute('stroke', best5.dur <= target ? '#4ADE80' : '#c2a700');
@@ -478,10 +501,10 @@ function renderWeeklyLoad(filtered) {
   });
 }
 
-/* ─── 3. Consistency Heatmap ─── */
+/* ─── 3. Contribution Graph (GitHub-style) ─── */
 function renderHeatmap(allSessions) {
-  const grid = $('#heatmap-grid');
-  grid.innerHTML = '';
+  const container = $('#contribution-graph');
+  container.innerHTML = '';
   const summaryEl = $('#heatmap-summary');
 
   // Build a map of date -> session count
@@ -490,50 +513,117 @@ function renderHeatmap(allSessions) {
     dateCounts[s.sessionDate] = (dateCounts[s.sessionDate] || 0) + 1;
   });
 
-  // Show last 12 weeks (84 days ending on today's week's Sunday)
+  // Determine date range: last ~6 months ending at Saturday of this week
   const now = new Date();
-  const todayDow = (now.getDay() + 6) % 7; // Mon=0
-  // Start from 12 weeks ago Monday
-  const startDate = new Date(now.getTime() - (todayDow * dayMs) - (11 * 7 * dayMs));
+  const todayStr = now.toISOString().slice(0, 10);
+  // Find this Saturday (end of current week, Sun=0-based)
+  const dow = now.getDay(); // 0=Sun
+  const endDate = new Date(now.getTime() + (6 - dow) * dayMs);
+  // Go back N weeks to fit nicely on mobile (~26 weeks = 6 months)
+  const numWeeks = 26;
+  const startDate = new Date(endDate.getTime() - (numWeeks * 7 - 1) * dayMs);
 
-  const totalDays = 12 * 7;
+  // Organise into weeks (columns) of 7 days (rows: Sun=0 to Sat=6)
+  const weeks = [];
+  let week = [];
   let activeDays = 0;
-
+  const totalDays = numWeeks * 7;
   for (let i = 0; i < totalDays; i++) {
     const d = new Date(startDate.getTime() + i * dayMs);
     const key = d.toISOString().slice(0, 10);
     const count = dateCounts[key] || 0;
-    if (count > 0) activeDays++;
-
-    const cell = document.createElement('div');
-    cell.className = 'heatmap-cell';
-
-    // Intensity levels
+    if (count > 0 && d <= now) activeDays++;
     let level = 0;
     if (count === 1) level = 1;
     else if (count === 2) level = 2;
     else if (count === 3) level = 3;
     else if (count >= 4) level = 4;
-    cell.dataset.level = level;
-
-    // Today indicator
-    if (key === today) {
-      cell.style.outline = '1.5px solid var(--accent)';
-      cell.style.outlineOffset = '0px';
-    }
-
-    // Future days are dimmer
-    if (d > now) {
-      cell.style.opacity = '0.3';
-    }
-
-    cell.title = `${dateFmt(key)}: ${count} session${count !== 1 ? 's' : ''}`;
-    grid.appendChild(cell);
+    week.push({ key, count, level, future: d > now, isToday: key === todayStr, dayOfWeek: d.getDay(), monthIdx: d.getMonth(), date: d });
+    if (week.length === 7) { weeks.push(week); week = []; }
   }
+  if (week.length) weeks.push(week);
 
-  const weeks = 12;
-  const pct = ((activeDays / totalDays) * 100).toFixed(0);
-  summaryEl.textContent = `${activeDays}d / ${totalDays}d (${pct}%)`;
+  // Month labels: find the first week where a month starts
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const DAY_LABELS = ['Sun', '', 'Tue', '', 'Thu', '', 'Sat'];
+
+  // Build table
+  const table = document.createElement('table');
+  table.className = 'contrib-table';
+
+  // Month header row
+  const thead = document.createElement('thead');
+  const monthRow = document.createElement('tr');
+  monthRow.innerHTML = '<td></td>'; // spacer for day label column
+  let prevMonth = -1;
+  for (let w = 0; w < weeks.length; w++) {
+    // Use the first real day in the week to determine month
+    const firstDay = weeks[w][0];
+    const m = firstDay.monthIdx;
+    if (m !== prevMonth) {
+      const td = document.createElement('td');
+      td.className = 'contrib-month-label';
+      // Count how many consecutive weeks share this month
+      let span = 0;
+      for (let ww = w; ww < weeks.length; ww++) {
+        if (weeks[ww][0].monthIdx === m) span++; else break;
+      }
+      td.colSpan = span;
+      td.textContent = MONTHS[m];
+      monthRow.appendChild(td);
+      prevMonth = m;
+      w += span - 1; // skip ahead
+    }
+  }
+  thead.appendChild(monthRow);
+  table.appendChild(thead);
+
+  // Body: 7 rows (Sun–Sat), N columns (weeks)
+  const tbody = document.createElement('tbody');
+  for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+    const tr = document.createElement('tr');
+    // Day label
+    const labelTd = document.createElement('td');
+    labelTd.className = 'contrib-day-label';
+    labelTd.textContent = DAY_LABELS[dayIdx];
+    tr.appendChild(labelTd);
+
+    for (let w = 0; w < weeks.length; w++) {
+      const day = weeks[w][dayIdx];
+      const td = document.createElement('td');
+      td.className = 'contrib-cell';
+      if (!day || !day.key) {
+        td.classList.add('empty');
+      } else {
+        td.dataset.level = day.future ? 0 : day.level;
+        if (day.future) td.style.opacity = '0.15';
+        if (day.isToday) td.classList.add('today');
+        td.title = `${dateFmt(day.key)}: ${day.count} session${day.count !== 1 ? 's' : ''}`;
+      }
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  container.appendChild(table);
+
+  // Legend
+  const legend = document.createElement('div');
+  legend.className = 'contrib-legend';
+  legend.innerHTML = '<span>Less</span>';
+  for (let l = 0; l <= 4; l++) {
+    const c = document.createElement('span');
+    c.className = 'contrib-legend-cell contrib-cell';
+    c.dataset.level = l;
+    legend.appendChild(c);
+  }
+  legend.innerHTML += '<span>More</span>';
+  container.appendChild(legend);
+
+  // Summary
+  const actualDays = Math.min(totalDays, Math.ceil((now - startDate) / dayMs) + 1);
+  const pct = ((activeDays / actualDays) * 100).toFixed(0);
+  summaryEl.textContent = `${activeDays}d / ${actualDays}d (${pct}%)`;
 }
 
 /* ─── 4. Volume & Recovery ─── */
@@ -742,7 +832,7 @@ function showSessionDetail(id) {
   for (const e of s.entries) {
     const icon = { cardio: '🏃', strength: '💪', hold: '🧘' }[e.type];
     html += `<div class="detail-entry"><div class="detail-entry-title">${icon} ${e.exercise}</div>`;
-    if (e.type === 'cardio') { html += `<div class="detail-entry-stat">${e.durationMin ? `Duration: ${e.durationMin.toFixed(0)} min<br>` : ''}${e.distanceKm ? `Distance: ${e.distanceKm} km<br>` : ''}Speed: ${calcSpeed(e).toFixed(1)} km/h</div>`; }
+    if (e.type === 'cardio') { html += `<div class="detail-entry-stat">${e.durationMin ? `Duration: ${parseFloat(e.durationMin.toFixed(2))} min<br>` : ''}${e.distanceKm ? `Distance: ${e.distanceKm} km<br>` : ''}Speed: ${calcSpeed(e).toFixed(1)} km/h</div>`; }
     else if (e.type === 'strength') {
       html += `<div class="detail-entry-stat">Muscle: ${e.muscle || 'N/A'}</div>`;
       if (e.sets?.length) { html += `<table class="detail-sets-table"><thead><tr><th>Set</th><th>Weight</th><th>Reps</th><th>Volume</th></tr></thead><tbody>${e.sets.map((set, i) => `<tr><td>${i + 1}</td><td>${set.weightKg} kg</td><td>${set.reps}</td><td>${(set.weightKg * set.reps).toLocaleString()} kg</td></tr>`).join('')}</tbody></table>`; }
@@ -752,6 +842,7 @@ function showSessionDetail(id) {
   body.innerHTML = html;
   $('#detail-title').textContent = dateFmt(s.sessionDate);
   $('#detail-edit').onclick = () => { $('#detail-dialog').close(); openForEdit(id); };
+  state._detailSessionId = id;
   $('#detail-dialog').showModal();
 }
 
@@ -762,7 +853,7 @@ function addEntryCard(type, data = null) {
   const icons = { cardio: '🏃', strength: '💪', hold: '🧘' }, labels = { cardio: 'Cardio', strength: 'Strength', hold: 'Timed Hold' };
   let f = '';
   if (type === 'cardio') {
-    f = `<div class="entry-fields"><div class="search-wrap"><label class="form-label"><span>Exercise</span><input list="cardio-options" type="text" class="exercise-search" data-search-type="cardio" placeholder="Walk / Run / Row" value="${data?.exercise || ''}" autocomplete="off" /></label><div class="search-suggestions" id="suggestions-${idx}"></div></div><div class="form-row-3 compact-group"><label class="form-label"><span>Duration (min)</span><input type="number" class="entry-dur" min="0" step="1" value="${data?.durationMin || ''}" /></label><label class="form-label"><span>Distance (km)</span><input type="number" class="entry-dist" min="0" step="0.01" value="${data?.distanceKm || ''}" /></label><label class="form-label"><span>Speed (km/h)</span><input type="number" class="entry-speed" min="0" step="0.1" value="${data?.speedKmh || ''}" /></label></div><label class="form-label"><span>Note</span><textarea class="entry-note" rows="2">${data?.note || ''}</textarea></label></div>`;
+    f = `<div class="entry-fields"><div class="search-wrap"><label class="form-label"><span>Exercise</span><input list="cardio-options" type="text" class="exercise-search" data-search-type="cardio" placeholder="Walk / Run / Row" value="${data?.exercise || ''}" autocomplete="off" /></label><div class="search-suggestions" id="suggestions-${idx}"></div></div><div class="form-row-3 compact-group"><label class="form-label"><span>Duration (min)</span><input type="number" class="entry-dur" min="0" step="0.01" value="${data?.durationMin || ''}" /></label><label class="form-label"><span>Distance (km)</span><input type="number" class="entry-dist" min="0" step="0.01" value="${data?.distanceKm || ''}" /></label><label class="form-label"><span>Speed (km/h)</span><input type="number" class="entry-speed" min="0" step="0.1" value="${data?.speedKmh || ''}" /></label></div><label class="form-label"><span>Note</span><textarea class="entry-note" rows="2">${data?.note || ''}</textarea></label></div>`;
   } else if (type === 'strength') {
     const muscle = data?.muscle || 'Chest';
     const muscleOpts = MUSCLES.map(m => `<option ${m === muscle ? 'selected' : ''}>${m}</option>`).join('');
@@ -856,6 +947,12 @@ $('#add-session-open').addEventListener('click', () => { resetForm(); $('#sessio
 $('#cancel-btn').addEventListener('click', () => $('#session-dialog').close());
 $('#sessions-list').addEventListener('click', e => { const r = e.target.closest('.session-row'); if (r) showSessionDetail(r.dataset.sessionId); });
 $('#detail-close').addEventListener('click', () => $('#detail-dialog').close());
+$('#detail-delete').addEventListener('click', async () => {
+  const id = state._detailSessionId; if (!id) return;
+  if (!confirm('Delete this session? This cannot be undone.')) return;
+  try { await deleteSessionFromDb(id); $('#detail-dialog').close(); renderAll(); showToast('Session deleted.', 'success'); }
+  catch (err) { alert('Delete failed: ' + err.message); }
+});
 
 // Bottom nav
 $$('.nav-btn').forEach(btn => btn.addEventListener('click', () => {
@@ -895,11 +992,23 @@ $$('.chart-tab').forEach(tab => tab.addEventListener('click', () => {
 // Close dialogs on backdrop click
 ['session-dialog', 'detail-dialog'].forEach(id => { const d = $(`#${id}`); d.addEventListener('click', e => { if (e.target === d) d.close(); }); });
 // Close profile menu on outside click
-document.addEventListener('click', e => { if (!e.target.closest('#profile-button') && !e.target.closest('#profile-menu')) $('#profile-menu').classList.add('hidden'); });
+document.addEventListener('click', e => {
+  if (!e.target.closest('#profile-button') && !e.target.closest('#profile-menu')) $('#profile-menu').classList.add('hidden');
+  // Dismiss pinned chart tooltips when tapping outside any chart canvas
+  if (!e.target.closest('canvas')) {
+    Object.values(state.charts).forEach(c => {
+      if (c && c.__tooltipPinned) {
+        clearTimeout(c.__stickyTimer);
+        c.__tooltipPinned = false;
+        if (c.tooltip) { c.tooltip.setActiveElements([], { x: 0, y: 0 }); c.update('none'); }
+      }
+    });
+  }
+});
 
 /* ═══ Init ═══ */
 resetForm();
 _supabase.auth.getSession().then(({ data: { session } }) => {
-  if (session?.user) hydrateSignedInUser(session.user).catch(err => { console.error(err); resetSignedOutUser(); });
+  if (session?.user) hydrateSignedInUser(session.user).catch(err => { console.error('Init hydrate failed:', err); renderAll(); });
   else showAuthDialog();
 });
