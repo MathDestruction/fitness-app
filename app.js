@@ -1,14 +1,6 @@
-/* ════════════════════════════════════════════════════════════
-   Fitness Tracker — App Logic (Redesigned)
-   ════════════════════════════════════════════════════════════ */
 const _supabase = supabase.createClient(
   window.SUPABASE_URL,
-  window.SUPABASE_ANON,
-  {
-    auth: {
-      lock: (...args) => args[args.length - 1](),
-    },
-  },
+  window.SUPABASE_ANON
 );
 window._supabase = _supabase;
 
@@ -1176,9 +1168,9 @@ function renderRecovery(filtered) {
   const avgRest =
     restDays.length > 1
       ? (
-          restDays.slice(1).reduce((a, v) => a + v, 0) /
-          (restDays.length - 1)
-        ).toFixed(1)
+        restDays.slice(1).reduce((a, v) => a + v, 0) /
+        (restDays.length - 1)
+      ).toFixed(1)
       : 0;
   const avgVol = volumes.reduce((a, v) => a + v, 0) / volumes.length;
   const lastVol = volumes[volumes.length - 1] || 0;
