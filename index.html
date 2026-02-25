@@ -37,200 +37,206 @@
       </button>
     </header>
 
-    <!-- ═══ Goals Card ═══ -->
-    <section class="goals-card" id="goals-card">
-      <h2 class="goals-label">GOALS</h2>
-      <div class="goals-grid" id="goals-grid">
-        <!-- col 1: Weekly Sessions -->
-        <div class="goal-item">
-          <span class="goal-title">Weekly Sessions</span>
-          <div class="goal-fraction" id="goal-sessions"><span class="goal-num">0</span><span class="goal-den">/3</span>
-          </div>
-        </div>
-        <!-- col 2: Fastest 5km -->
-        <div class="goal-item goal-item-center">
-          <span class="goal-title">Fastest 5km</span>
-          <div class="goal-ring-wrap">
-            <svg class="goal-ring" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="6" />
-              <circle id="goal-5k-arc" cx="50" cy="50" r="44" fill="none" stroke="#c2a700" stroke-width="6"
-                stroke-linecap="round" stroke-dasharray="276.4 276.4" stroke-dashoffset="276.4"
-                transform="rotate(-90 50 50)" />
-            </svg>
-            <div class="goal-ring-text">
-              <strong id="goal-5k-time">-</strong>
+    <div id="dashboard-view" class="view active">
+      <!-- ═══ Goals Card ═══ -->
+      <section class="goals-card" id="goals-card">
+        <h2 class="goals-label">GOALS</h2>
+        <div class="goals-grid" id="goals-grid">
+          <!-- col 1: Weekly Sessions -->
+          <div class="goal-item">
+            <span class="goal-title">Weekly Sessions</span>
+            <div class="goal-fraction" id="goal-sessions"><span class="goal-num">0</span><span
+                class="goal-den">/3</span>
             </div>
           </div>
-        </div>
-        <!-- col 3: Longest Streak -->
-        <div class="goal-item">
-          <span class="goal-title">Weekly Streak</span>
-          <div class="goal-streak" id="goal-streak"><span class="goal-streak-icon">🔥</span><span
-              class="goal-streak-num">0</span><span class="goal-streak-unit">weeks</span></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══ Stats Section ═══ -->
-    <section class="stats-section">
-      <div class="stats-period" id="stats-period">
-        <button class="period-pill active" data-period="all">All</button>
-        <button class="period-pill" data-period="30">30d</button>
-        <button class="period-pill" data-period="7">7d</button>
-      </div>
-      <div class="stats-grid">
-        <div class="stat-card stat-combined">
-          <div class="stat-group">
-            <div class="stat-head">
-              <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
-                <circle cx="12" cy="5" r="2" />
-                <path d="M7 20l3-8 2 3 2-3 3 8" />
+          <!-- col 2: Fastest 5km -->
+          <div class="goal-item goal-item-center">
+            <span class="goal-title">Fastest 5km</span>
+            <div class="goal-ring-wrap">
+              <svg class="goal-ring" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="6" />
+                <circle id="goal-5k-arc" cx="50" cy="50" r="44" fill="none" stroke="#c2a700" stroke-width="6"
+                  stroke-linecap="round" stroke-dasharray="276.4 276.4" stroke-dashoffset="276.4"
+                  transform="rotate(-90 50 50)" />
               </svg>
-              <span>Total Distance</span>
+              <div class="goal-ring-text">
+                <strong id="goal-5k-time">-</strong>
+              </div>
             </div>
-            <div class="stat-big" id="stat-distance">-</div>
-            <div class="stat-unit">km</div>
           </div>
-          <div class="stat-group">
+          <!-- col 3: Longest Streak -->
+          <div class="goal-item">
+            <span class="goal-title">Weekly Streak</span>
+            <div class="goal-streak" id="goal-streak"><span class="goal-streak-icon">🔥</span><span
+                class="goal-streak-num">0</span><span class="goal-streak-unit">weeks</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ Stats Section ═══ -->
+      <section class="stats-section">
+        <div class="stats-period" id="stats-period">
+          <button class="period-pill active" data-period="all">All</button>
+          <button class="period-pill" data-period="30">30d</button>
+          <button class="period-pill" data-period="7">7d</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card stat-combined">
+            <div class="stat-group">
+              <div class="stat-head">
+                <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+                  <circle cx="12" cy="5" r="2" />
+                  <path d="M7 20l3-8 2 3 2-3 3 8" />
+                </svg>
+                <span>Total Distance</span>
+              </div>
+              <div class="stat-big" id="stat-distance">-</div>
+              <div class="stat-unit">km</div>
+            </div>
+            <div class="stat-group">
+              <div class="stat-head">
+                <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span>Total Time</span>
+              </div>
+              <div class="stat-big" id="stat-time">-</div>
+              <div class="stat-unit">hours</div>
+            </div>
+          </div>
+          <div class="stat-card plank-card">
             <div class="stat-head">
               <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+                <rect x="2" y="8" width="20" height="8" rx="2" />
+              </svg>
+              <span>Plank Counter</span>
+            </div>
+            <div class="plank-controls">
+              <button id="plank-minus" class="plank-btn">-</button>
+              <div class="plank-count" id="plank-text">0/10</div>
+              <button id="plank-plus" class="plank-btn">+</button>
+            </div>
+            <div class="plank-progress-bg">
+              <div class="plank-progress-fill" id="plank-bar" style="width: 0%;"></div>
+            </div>
+            <div class="plank-streak">
+              <span id="plank-streak-text">0 day streak</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- New Premium Stat Visuals -->
+        <div class="premium-stats-grid">
+          <!-- 1. Muscle Balance Donut -->
+          <div class="premium-stat-card">
+            <div class="premium-stat-head">
+              <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 2a10 10 0 0 1 0 20" />
+                <path d="M12 2a10 10 0 0 0 0 20" />
+              </svg>
+              <span>Muscle Balance</span>
+            </div>
+            <div class="donut-chart-wrap">
+              <canvas id="muscle-balance-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- 2. Weekly Load Progression -->
+          <div class="premium-stat-card">
+            <div class="premium-stat-head">
+              <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+                <rect x="3" y="12" width="4" height="9" rx="1" />
+                <rect x="10" y="7" width="4" height="14" rx="1" />
+                <rect x="17" y="3" width="4" height="18" rx="1" />
+              </svg>
+              <span>Weekly Load</span>
+            </div>
+            <div class="weekly-load-wrap">
+              <canvas id="weekly-load-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- 3. Contribution Graph -->
+          <div class="premium-stat-card premium-stat-card-wide">
+            <div class="premium-stat-head">
+              <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18" />
+                <path d="M9 3v18" />
+              </svg>
+              <span>Consistency</span>
+              <span class="premium-stat-sub" id="heatmap-summary"></span>
+            </div>
+            <div class="contribution-graph" id="contribution-graph"></div>
+          </div>
+
+          <!-- 4. Volume & Recovery -->
+          <div class="premium-stat-card premium-stat-card-wide">
+            <div class="premium-stat-head">
+              <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+              </svg>
+              <span>Volume & Recovery</span>
+            </div>
+            <div class="recovery-wrap">
+              <canvas id="recovery-chart"></canvas>
+            </div>
+            <div class="recovery-stats" id="recovery-stats"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ Dashboard Charts ═══ -->
+      <div class="dashboard-charts">
+
+        <!-- Running Chart -->
+        <article class="chart-card" id="running-card">
+          <div class="chart-card-head">
+            <div class="chart-card-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+              </svg>
+            </div>
+            <h3>Distance Covered</h3>
+            <span class="chart-card-stat" id="run-chart-stat"></span>
+          </div>
+          <div class="chart-tabs">
+            <button class="chart-tab active" data-chart="run-distance">Distance</button>
+            <button class="chart-tab" data-chart="run-speed">Speed</button>
+          </div>
+          <div class="chart-wrap"><canvas id="run-chart"></canvas></div>
+        </article>
+
+        <!-- Strength Chart -->
+        <article class="chart-card" id="strength-card">
+          <div class="chart-card-head">
+            <div class="chart-card-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6.5 6.5h11M6 12h12M6.5 17.5h11M4 6.5V17.5M20 6.5V17.5M2 9v6M22 9v6" />
+              </svg>
+            </div>
+            <h3>Strength PRs</h3>
+          </div>
+          <div class="chart-wrap chart-wrap-tall"><canvas id="muscle-chart"></canvas></div>
+        </article>
+
+        <!-- Recent Exercises -->
+        <article class="chart-card" id="recent-card">
+          <div class="chart-card-head">
+            <div class="chart-card-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
-              <span>Total Time</span>
             </div>
-            <div class="stat-big" id="stat-time">-</div>
-            <div class="stat-unit">hours</div>
+            <h3>Recent Exercises</h3>
           </div>
-        </div>
-        <div class="stat-card plank-card">
-          <div class="stat-head">
-            <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
-              <rect x="2" y="8" width="20" height="8" rx="2" />
-            </svg>
-            <span>Plank Counter</span>
-          </div>
-          <div class="plank-controls">
-            <button id="plank-minus" class="plank-btn">-</button>
-            <div class="plank-count" id="plank-text">0/10</div>
-            <button id="plank-plus" class="plank-btn">+</button>
-          </div>
-          <div class="plank-progress-bg">
-            <div class="plank-progress-fill" id="plank-bar" style="width: 0%;"></div>
-          </div>
-        </div>
+          <div id="recent-exercises" class="recent-exercises"></div>
+        </article>
       </div>
-
-      <!-- New Premium Stat Visuals -->
-      <div class="premium-stats-grid">
-        <!-- 1. Muscle Balance Donut -->
-        <div class="premium-stat-card">
-          <div class="premium-stat-head">
-            <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 2a10 10 0 0 1 0 20" />
-              <path d="M12 2a10 10 0 0 0 0 20" />
-            </svg>
-            <span>Muscle Balance</span>
-          </div>
-          <div class="donut-chart-wrap">
-            <canvas id="muscle-balance-chart"></canvas>
-          </div>
-        </div>
-
-        <!-- 2. Weekly Load Progression -->
-        <div class="premium-stat-card">
-          <div class="premium-stat-head">
-            <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
-              <rect x="3" y="12" width="4" height="9" rx="1" />
-              <rect x="10" y="7" width="4" height="14" rx="1" />
-              <rect x="17" y="3" width="4" height="18" rx="1" />
-            </svg>
-            <span>Weekly Load</span>
-          </div>
-          <div class="weekly-load-wrap">
-            <canvas id="weekly-load-chart"></canvas>
-          </div>
-        </div>
-
-        <!-- 3. Contribution Graph -->
-        <div class="premium-stat-card premium-stat-card-wide">
-          <div class="premium-stat-head">
-            <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <path d="M3 9h18" />
-              <path d="M9 3v18" />
-            </svg>
-            <span>Consistency</span>
-            <span class="premium-stat-sub" id="heatmap-summary"></span>
-          </div>
-          <div class="contribution-graph" id="contribution-graph"></div>
-        </div>
-
-        <!-- 4. Volume & Recovery -->
-        <div class="premium-stat-card premium-stat-card-wide">
-          <div class="premium-stat-head">
-            <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-            </svg>
-            <span>Volume & Recovery</span>
-          </div>
-          <div class="recovery-wrap">
-            <canvas id="recovery-chart"></canvas>
-          </div>
-          <div class="recovery-stats" id="recovery-stats"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══ Dashboard Views ═══ -->
-    <section id="dashboard-view" class="view active">
-
-      <!-- Running Chart -->
-      <article class="chart-card" id="running-card">
-        <div class="chart-card-head">
-          <div class="chart-card-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-          </div>
-          <h3>Distance Covered</h3>
-          <span class="chart-card-stat" id="run-chart-stat"></span>
-        </div>
-        <div class="chart-tabs">
-          <button class="chart-tab active" data-chart="run-distance">Distance</button>
-          <button class="chart-tab" data-chart="run-speed">Speed</button>
-        </div>
-        <div class="chart-wrap"><canvas id="run-chart"></canvas></div>
-      </article>
-
-      <!-- Strength Chart -->
-      <article class="chart-card" id="strength-card">
-        <div class="chart-card-head">
-          <div class="chart-card-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M6.5 6.5h11M6 12h12M6.5 17.5h11M4 6.5V17.5M20 6.5V17.5M2 9v6M22 9v6" />
-            </svg>
-          </div>
-          <h3>Strength PRs</h3>
-        </div>
-        <div class="chart-wrap chart-wrap-tall"><canvas id="muscle-chart"></canvas></div>
-      </article>
-
-      <!-- Recent Exercises -->
-      <article class="chart-card" id="recent-card">
-        <div class="chart-card-head">
-          <div class="chart-card-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-          </div>
-          <h3>Recent Exercises</h3>
-        </div>
-        <div id="recent-exercises" class="recent-exercises"></div>
-      </article>
-    </section>
+    </div> <!-- end dashboard-view wrapper -->
 
     <!-- ═══ Sessions View ═══ -->
     <section id="sessions-view" class="view">

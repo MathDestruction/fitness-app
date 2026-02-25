@@ -371,6 +371,14 @@ body {
   transition: width 0.3s ease;
 }
 
+.plank-streak {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
 .stat-head {
   display: flex;
   align-items: center;
