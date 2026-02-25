@@ -3,7 +3,7 @@
    ════════════════════════════════════════════════════════════ */
 const _supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON, {
   auth: {
-    lock: (name, acquire) => acquire()
+    lock: (...args) => args[args.length - 1]()
   }
 });
 window._supabase = _supabase;
