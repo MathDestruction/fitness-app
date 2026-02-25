@@ -274,14 +274,12 @@ function resetSignedOutUser() {
   destroyAllCharts();
   showAuthDialog();
 }
-_supabase.auth.onAuthStateChange(async (event, s) => {
+_supabase.auth.onAuthStateChange((event, s) => {
   if (s?.user) {
-    try {
-      await hydrateSignedInUser(s.user);
-    } catch (err) {
+    hydrateSignedInUser(s.user).catch((err) => {
       console.error("Hydrate failed:", err);
       renderAll();
-    }
+    });
   } else if (event === "SIGNED_OUT") resetSignedOutUser();
 });
 $("#logout-btn").addEventListener("click", async () => {
