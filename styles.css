@@ -198,8 +198,8 @@ body {
 
 .goal-ring-wrap {
   position: relative;
-  width: 70px;
-  height: 70px;
+  width: 90px;
+  height: 90px;
   margin: 0 auto;
 }
 
@@ -218,16 +218,17 @@ body {
 }
 
 .goal-ring-text strong {
-  font-size: 1rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: #163d26;
-  line-height: 1.1;
+  line-height: 1;
 }
 
-.goal-ring-text small {
-  font-size: 0.6rem;
+.goal-ring-min {
+  font-size: 0.65rem;
+  font-weight: 700;
   color: #3a7a53;
-  font-weight: 600;
+  margin-top: 2px;
 }
 
 .goal-streak {
@@ -302,6 +303,72 @@ body {
 
 .stat-card:hover {
   border-color: var(--border-light);
+}
+
+.stat-combined {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.stat-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.plank-card {
+  border-color: var(--accent);
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.plank-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.plank-btn {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--txt);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.plank-btn:hover {
+  background: var(--card-hover);
+  border-color: var(--border-light);
+}
+
+.plank-count {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--txt);
+}
+
+.plank-progress-bg {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-raised);
+  border-radius: 3px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.plank-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
 .stat-head {

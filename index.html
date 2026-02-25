@@ -51,15 +51,14 @@
         <div class="goal-item goal-item-center">
           <span class="goal-title">Fastest 5km</span>
           <div class="goal-ring-wrap">
-            <svg class="goal-ring" viewBox="0 0 80 80">
-              <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="6" />
-              <circle id="goal-5k-arc" cx="40" cy="40" r="34" fill="none" stroke="#c2a700" stroke-width="6"
-                stroke-linecap="round" stroke-dasharray="213.6 213.6" stroke-dashoffset="213.6"
-                transform="rotate(-90 40 40)" />
+            <svg class="goal-ring" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="6" />
+              <circle id="goal-5k-arc" cx="50" cy="50" r="44" fill="none" stroke="#c2a700" stroke-width="6"
+                stroke-linecap="round" stroke-dasharray="276.4 276.4" stroke-dashoffset="276.4"
+                transform="rotate(-90 50 50)" />
             </svg>
             <div class="goal-ring-text">
               <strong id="goal-5k-time">-</strong>
-              <small id="goal-5k-target">&lt;30min</small>
             </div>
           </div>
         </div>
@@ -80,27 +79,45 @@
         <button class="period-pill" data-period="7">7d</button>
       </div>
       <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-head">
-            <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
-              <circle cx="12" cy="5" r="2" />
-              <path d="M7 20l3-8 2 3 2-3 3 8" />
-            </svg>
-            <span>Total Distance</span>
+        <div class="stat-card stat-combined">
+          <div class="stat-group">
+            <div class="stat-head">
+              <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+                <circle cx="12" cy="5" r="2" />
+                <path d="M7 20l3-8 2 3 2-3 3 8" />
+              </svg>
+              <span>Total Distance</span>
+            </div>
+            <div class="stat-big" id="stat-distance">-</div>
+            <div class="stat-unit">km</div>
           </div>
-          <div class="stat-big" id="stat-distance">-</div>
-          <div class="stat-unit">km</div>
+          <div class="stat-group">
+            <div class="stat-head">
+              <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>Total Time</span>
+            </div>
+            <div class="stat-big" id="stat-time">-</div>
+            <div class="stat-unit">hours</div>
+          </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card plank-card">
           <div class="stat-head">
             <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
+              <rect x="2" y="8" width="20" height="8" rx="2" />
             </svg>
-            <span>Total Time</span>
+            <span>Plank Counter</span>
           </div>
-          <div class="stat-big" id="stat-time">-</div>
-          <div class="stat-unit">hours</div>
+          <div class="plank-controls">
+            <button id="plank-minus" class="plank-btn">-</button>
+            <div class="plank-count" id="plank-text">0/10</div>
+            <button id="plank-plus" class="plank-btn">+</button>
+          </div>
+          <div class="plank-progress-bg">
+            <div class="plank-progress-fill" id="plank-bar" style="width: 0%;"></div>
+          </div>
         </div>
       </div>
 
@@ -119,7 +136,6 @@
           <div class="donut-chart-wrap">
             <canvas id="muscle-balance-chart"></canvas>
           </div>
-          <div class="donut-legend" id="muscle-balance-legend"></div>
         </div>
 
         <!-- 2. Weekly Load Progression -->
@@ -178,13 +194,12 @@
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
             </svg>
           </div>
-          <h3>Distance Run</h3>
+          <h3>Distance Covered</h3>
           <span class="chart-card-stat" id="run-chart-stat"></span>
         </div>
         <div class="chart-tabs">
           <button class="chart-tab active" data-chart="run-distance">Distance</button>
           <button class="chart-tab" data-chart="run-speed">Speed</button>
-          <button class="chart-tab" data-chart="run-dual">Combined</button>
         </div>
         <div class="chart-wrap"><canvas id="run-chart"></canvas></div>
       </article>

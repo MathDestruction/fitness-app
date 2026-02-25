@@ -311,9 +311,9 @@ function renderGoals(sessions) {
   const best5 = fives[0], target = 30;
   const timeEl = $('#goal-5k-time'), arcEl = $('#goal-5k-arc');
   if (best5) {
-    timeEl.textContent = `${Math.round(best5.dur)}min`;
+    timeEl.innerHTML = `${Math.round(best5.dur)}<div class="goal-ring-min">min</div>`;
     const pct = Math.min(1, Math.max(0, (60 - best5.dur) / (60 - target)));
-    const circ = 2 * Math.PI * 34;
+    const circ = 2 * Math.PI * 44;
     arcEl.setAttribute('stroke-dashoffset', circ * (1 - pct));
     arcEl.setAttribute('stroke', best5.dur <= target ? '#4ADE80' : '#c2a700');
   } else { timeEl.textContent = '-'; }
@@ -420,7 +420,7 @@ function renderMuscleBalance(filtered) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '65%',
+      cutout: '55%',
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -432,16 +432,31 @@ function renderMuscleBalance(filtered) {
           }
         }
       }
-    }
+    },
+    plugins: [{
+      id: 'donutLabelsInside',
+      afterDraw(chart) {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        chart.data.datasets[0].data.forEach((val, i) => {
+          const pct = ((val / total) * 100).toFixed(0);
+          if (pct < 5) return;
+          const pos = meta.data[i].tooltipPosition();
+          ctx.save();
+          let fSize = pct > 15 ? 11 : 9;
+          ctx.font = `600 ${fSize}px Inter`;
+          ctx.fillStyle = '#12181D';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(labels[i], pos.x, pos.y - (fSize / 1.5));
+          ctx.fillStyle = 'rgba(18, 24, 29, 0.85)';
+          ctx.font = `800 ${fSize}px Inter`;
+          ctx.fillText(`${pct}%`, pos.x, pos.y + (fSize / 1.5));
+          ctx.restore();
+        });
+      }
+    }]
   });
-
-  // Custom legend
-  const legendEl = $('#muscle-balance-legend');
-  legendEl.innerHTML = sortedEntries.map(([cat, count]) => {
-    const pct = ((count / total) * 100).toFixed(0);
-    const color = CATEGORY_COLORS[cat] || '#6b7f8e';
-    return `<div class="donut-legend-item"><span class="donut-legend-dot" style="background:${color}"></span>${cat} <span class="donut-legend-pct">${pct}%</span></div>`;
-  }).join('');
 }
 
 /* ─── 2. Weekly Load Progression ─── */
@@ -741,39 +756,69 @@ function renderRecovery(filtered) {
 
 /* ─── Running Chart (gradient area) ─── */
 function renderRunningAnalytics(sessions) {
-  const runs = sessions.flatMap(s => s.entries.filter(e => e.type === 'cardio' && /run|jog|sprint|treadmill/i.test(e.exercise || ''))
-    .map(e => ({ date: s.sessionDate, dist: calcDistance(e), speed: calcSpeed(e), duration: e.durationMin || 0, exercise: e.exercise })));
-  const latestRun = runs[runs.length - 1];
+  const isDistance = state.activeRunChart === 'run-distance';
+  const cardioByDate = new Map();
+  sessions.forEach(s => {
+    s.entries.filter(e => e.type === 'cardio').forEach(e => {
+      const isRun = /run|jog|sprint|treadmill/i.test(e.exercise || '');
+      const isWalk = /walk|hike/i.test(e.exercise || '');
+      if (isRun || isWalk) {
+        if (!cardioByDate.has(s.sessionDate)) cardioByDate.set(s.sessionDate, { runDist: 0, runDur: 0, walkDist: 0, walkDur: 0 });
+        const d = cardioByDate.get(s.sessionDate);
+        if (isRun) { d.runDist += calcDistance(e); d.runDur += (e.durationMin || 0); }
+        if (isWalk) { d.walkDist += calcDistance(e); d.walkDur += (e.durationMin || 0); }
+      }
+    });
+  });
+
+  const dates = [...cardioByDate.keys()].sort();
+  const aggregated = dates.map(date => {
+    const d = cardioByDate.get(date);
+    const runSpeed = d.runDur > 0 ? (d.runDist / (d.runDur / 60)) : 0;
+    const walkSpeed = d.walkDur > 0 ? (d.walkDist / (d.walkDur / 60)) : 0;
+    return { date, runDist: d.runDist, runSpeed, walkDist: d.walkDist, walkSpeed };
+  });
+
+  const latest = aggregated[aggregated.length - 1];
   const statEl = $('#run-chart-stat');
-  if (statEl) statEl.textContent = latestRun ? `${latestRun.speed.toFixed(1)} km/h` : '';
-  drawRunChart(runs, state.activeRunChart);
+  if (statEl) statEl.textContent = latest && latest.runSpeed > 0 ? `${latest.runSpeed.toFixed(1)} km/h` : '';
+
+  drawRunChart(aggregated, state.activeRunChart);
 }
 
-function drawRunChart(runs, mode) {
+function drawRunChart(data, mode) {
   const canvas = $('#run-chart'), ctx = canvas.getContext('2d');
-  const labels = runs.map(r => dateFmtShort(r.date));
+  const labels = data.map(d => dateFmtShort(d.date));
   const h = canvas.parentElement?.clientHeight || 180;
-  const grad = ctx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, 'rgba(134,200,163,0.35)'); grad.addColorStop(1, 'rgba(134,200,163,0.02)');
+
+  const runGrad = ctx.createLinearGradient(0, 0, 0, h);
+  runGrad.addColorStop(0, 'rgba(134,200,163,0.35)'); runGrad.addColorStop(1, 'rgba(134,200,163,0.02)');
+
+  const walkGrad = ctx.createLinearGradient(0, 0, 0, h);
+  walkGrad.addColorStop(0, 'rgba(96,165,250,0.35)'); walkGrad.addColorStop(1, 'rgba(96,165,250,0.02)');
+
   let config;
+  const commonOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 10, padding: 12, color: '#c1cdd6' } } } };
+
   if (mode === 'run-distance') {
     config = {
-      type: 'line', data: { labels, datasets: [{ label: 'Distance (km)', data: runs.map(r => r.dist), borderColor: '#86C8A3', backgroundColor: grad, fill: true, tension: 0.4, pointBackgroundColor: '#86C8A3', pointBorderColor: '#12181D', pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 6 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { title: i => runs[i[0].dataIndex] ? dateFmt(runs[i[0].dataIndex].date) : '', label: i => `Distance: ${i.parsed.y.toFixed(2)} km` } } }, scales: { x: { ticks: { maxRotation: 0 } }, y: { ticks: { callback: v => v + ' km' }, beginAtZero: true } } }
-    };
-  } else if (mode === 'run-speed') {
-    config = {
-      type: 'line', data: { labels, datasets: [{ label: 'Speed (km/h)', data: runs.map(r => r.speed), borderColor: '#86C8A3', backgroundColor: grad, fill: true, tension: 0.4, pointBackgroundColor: '#86C8A3', pointBorderColor: '#12181D', pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 6 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { title: i => runs[i[0].dataIndex] ? dateFmt(runs[i[0].dataIndex].date) : '', label: i => `Speed: ${i.parsed.y.toFixed(1)} km/h` } } }, scales: { x: { ticks: { maxRotation: 0 } }, y: { ticks: { callback: v => v + ' km/h' } } } }
+      type: 'line', data: {
+        labels, datasets: [
+          { label: 'Run', data: data.map(d => d.runDist || null), borderColor: '#86C8A3', backgroundColor: runGrad, fill: true, tension: 0.4, pointBackgroundColor: '#86C8A3', pointBorderColor: '#12181D', pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 6, spanGaps: true },
+          { label: 'Walk', data: data.map(d => d.walkDist || null), borderColor: '#60A5FA', backgroundColor: walkGrad, fill: true, tension: 0.4, pointBackgroundColor: '#60A5FA', pointBorderColor: '#12181D', pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 6, spanGaps: true }
+        ]
+      },
+      options: { ...commonOpts, plugins: { ...commonOpts.plugins, tooltip: { callbacks: { title: i => data[i[0].dataIndex] ? dateFmt(data[i[0].dataIndex].date) : '', label: i => `${i.dataset.label}: ${i.parsed.y.toFixed(2)} km` } } }, scales: { x: { ticks: { maxRotation: 0 } }, y: { ticks: { callback: v => v + ' km' }, beginAtZero: true } } }
     };
   } else {
     config = {
-      type: 'bar', data: {
+      type: 'line', data: {
         labels, datasets: [
-          { type: 'bar', label: 'Distance (km)', data: runs.map(r => r.dist), backgroundColor: 'rgba(134,200,163,0.35)', borderColor: '#86C8A3', borderWidth: 1, borderRadius: 6, borderSkipped: false, yAxisID: 'y', order: 2 },
-          { type: 'line', label: 'Speed (km/h)', data: runs.map(r => r.speed), borderColor: '#9DD6B5', backgroundColor: 'transparent', tension: 0.35, pointBackgroundColor: '#9DD6B5', pointBorderColor: '#12181D', pointBorderWidth: 2, pointRadius: 3, yAxisID: 'y1', order: 1 }
+          { label: 'Run Speed', data: data.map(d => d.runSpeed || null), borderColor: '#86C8A3', backgroundColor: runGrad, fill: true, tension: 0.4, pointBackgroundColor: '#86C8A3', pointBorderColor: '#12181D', pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 6, spanGaps: true },
+          { label: 'Walk Speed', data: data.map(d => d.walkSpeed || null), borderColor: '#60A5FA', backgroundColor: walkGrad, fill: true, tension: 0.4, pointBackgroundColor: '#60A5FA', pointBorderColor: '#12181D', pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 6, spanGaps: true }
         ]
-      }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 10, padding: 12 } } }, scales: { x: { ticks: { maxRotation: 0 } }, y: { position: 'left', ticks: { callback: v => v + ' km' }, beginAtZero: true }, y1: { position: 'right', ticks: { callback: v => v + ' km/h' }, grid: { drawOnChartArea: false } } } }
+      },
+      options: { ...commonOpts, plugins: { ...commonOpts.plugins, tooltip: { callbacks: { title: i => data[i[0].dataIndex] ? dateFmt(data[i[0].dataIndex].date) : '', label: i => `${i.dataset.label}: ${i.parsed.y.toFixed(1)} km/h` } } }, scales: { x: { ticks: { maxRotation: 0 } }, y: { ticks: { callback: v => v + ' km/h' } } } }
     };
   }
   createChart('run', canvas, config);
@@ -960,6 +1005,40 @@ $('#detail-delete').addEventListener('click', async () => {
   catch (err) { alert('Delete failed: ' + err.message); }
 });
 
+// Plank Controls
+$('#plank-plus')?.addEventListener('click', async () => {
+  let ts = state.sessions.find(s => s.sessionDate === today);
+  if (!ts) ts = { sessionDate: today, weightKg: null, notes: '', entries: [] };
+  ts.entries.push({ type: 'hold', exercise: 'Plank', sets: 1, seconds: 60 });
+  const btn = $('#plank-plus'); btn.disabled = true;
+  state.editingId = ts.id || null;
+  try {
+    await saveSessionToDb({ sessionDate: ts.sessionDate, weightKg: ts.weightKg, notes: ts.notes, entries: ts.entries });
+    renderAll();
+  } catch (err) { console.error('Plank error', err); }
+  finally { btn.disabled = false; state.editingId = null; }
+});
+
+$('#plank-minus')?.addEventListener('click', async () => {
+  let ts = state.sessions.find(s => s.sessionDate === today);
+  if (!ts) return;
+  const pIdx = ts.entries.map((e, i) => e.type === 'hold' && e.exercise.toLowerCase() === 'plank' ? i : -1).filter(i => i !== -1).pop();
+  if (pIdx === undefined) return;
+  const e = ts.entries[pIdx];
+  if (e.sets > 1) { e.sets -= 1; } else { ts.entries.splice(pIdx, 1); }
+  const btn = $('#plank-minus'); btn.disabled = true;
+  state.editingId = ts.id;
+  try {
+    if (ts.entries.length === 0 && ts.weightKg === null && !ts.notes) {
+      await deleteSessionFromDb(ts.id);
+    } else {
+      await saveSessionToDb({ sessionDate: ts.sessionDate, weightKg: ts.weightKg, notes: ts.notes, entries: ts.entries });
+    }
+    renderAll();
+  } catch (err) { console.error('Plank error', err); }
+  finally { btn.disabled = false; state.editingId = null; }
+});
+
 // Bottom nav
 $$('.nav-btn').forEach(btn => btn.addEventListener('click', () => {
   $$('.nav-btn').forEach(t => t.classList.remove('active'));
@@ -990,9 +1069,7 @@ $$('.chart-tab').forEach(tab => tab.addEventListener('click', () => {
   $$('.chart-tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
   state.activeRunChart = tab.dataset.chart;
-  const runs = sortedSessions().flatMap(s => s.entries.filter(e => e.type === 'cardio' && /run|jog|sprint|treadmill/i.test(e.exercise || ''))
-    .map(e => ({ date: s.sessionDate, dist: calcDistance(e), speed: calcSpeed(e), duration: e.durationMin || 0, exercise: e.exercise })));
-  drawRunChart(runs, state.activeRunChart);
+  renderRunningAnalytics(sortedSessions());
 }));
 
 // Close dialogs on backdrop click
