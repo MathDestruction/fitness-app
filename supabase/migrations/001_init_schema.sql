@@ -249,7 +249,7 @@ insert into public.exercises (user_id, name, category, primary_muscle_group) val
   (null, 'Reverse Fly',    'strength', 'Shoulders'),
   -- Strength — Core
   (null, 'Crunch',             'strength', 'Core'),
-  (null, 'Russian Twist',      'strength', 'Core'),
+  (null, 'Roman Chair - Side',      'strength', 'Core'),
   (null, 'Hanging Leg Raise',  'strength', 'Core'),
   (null, 'Cable Crunch',       'strength', 'Core'),
   (null, 'Ab Roller',          'strength', 'Core'),

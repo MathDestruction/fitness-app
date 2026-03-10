@@ -70,7 +70,7 @@ const EXERCISE_DB = {
     { name: "Face Pull", muscle: "Shoulders" },
     { name: "Reverse Fly", muscle: "Shoulders" },
     { name: "Crunch", muscle: "Core" },
-    { name: "Russian Twist", muscle: "Core" },
+    { name: "Roman Chair - Side", muscle: "Core" },
     { name: "Hanging Leg Raise", muscle: "Core" },
     { name: "Cable Crunch", muscle: "Core" },
     { name: "Ab Roller", muscle: "Core" },
@@ -396,6 +396,17 @@ async function loadSessions() {
       ss,
     ),
   );
+
+  // Augment EXERCISE_DB with custom exercises from history
+  state.sessions.forEach(s => {
+    s.entries.forEach(e => {
+      if (e.type === "cardio" && !EXERCISE_DB.cardio.includes(e.exercise)) EXERCISE_DB.cardio.push(e.exercise);
+      if (e.type === "hold" && !EXERCISE_DB.hold.includes(e.exercise)) EXERCISE_DB.hold.push(e.exercise);
+      if (e.type === "strength" && !EXERCISE_DB.strength.some(x => x.name === e.exercise)) {
+        EXERCISE_DB.strength.push({ name: e.exercise, muscle: e.muscle || "Other" });
+      }
+    });
+  });
 }
 
 async function ensureSession() {
@@ -522,7 +533,7 @@ Chart.register({
     }
     if (
       chart.__tooltipPinned &&
-      (evt.type === "mouseout" || evt.type === "pointerleave")
+      (evt.type === "mouseout" || evt.type === "pointerleave" || evt.type === "touchmove" || evt.type === "scroll")
     ) {
       return false;
     }
@@ -885,7 +896,7 @@ function renderMuscleBalance(filtered) {
     plugins: [
       {
         id: "donutLabelsInside",
-        afterDraw(chart) {
+        afterDatasetsDraw(chart) {
           const ctx = chart.ctx;
           const meta = chart.getDatasetMeta(0);
           chart.data.datasets[0].data.forEach((val, i) => {
@@ -1476,10 +1487,11 @@ function renderStrengthAnalytics(sessions) {
       .filter((e) => e.type === "strength")
       .forEach((e) => {
         const mx = (e.sets || []).reduce(
-          (m, set) => Math.max(m, set.weightKg || 0),
+          (m, set) => Math.max(m, Number(set.weightKg) || 0),
           0,
         );
-        if (mx > (maxByEx.get(e.exercise) || 0)) maxByEx.set(e.exercise, mx);
+        const current = maxByEx.has(e.exercise) ? maxByEx.get(e.exercise) : -1;
+        if (mx > current) maxByEx.set(e.exercise, mx);
       }),
   );
   const sorted = [...maxByEx.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -1915,6 +1927,13 @@ $("#plank-plus")?.addEventListener("click", async () => {
   const btn = $("#plank-plus");
   btn.disabled = true;
   state.editingId = ts.id || null;
+  const existingIdx = state.sessions.findIndex((s) => s.id === ts.id || s.sessionDate === ts.sessionDate);
+  if (existingIdx !== -1) {
+    state.sessions[existingIdx] = ts;
+  } else {
+    state.sessions.push(ts);
+  }
+  renderAll();
   try {
     await saveSessionToDb({
       sessionDate: ts.sessionDate,
@@ -1951,6 +1970,11 @@ $("#plank-minus")?.addEventListener("click", async () => {
   const btn = $("#plank-minus");
   btn.disabled = true;
   state.editingId = ts.id;
+  const existingIdx = state.sessions.findIndex((s) => s.id === ts.id || s.sessionDate === ts.sessionDate);
+  if (existingIdx !== -1) {
+    state.sessions[existingIdx] = ts;
+  }
+  renderAll();
   try {
     if (ts.entries.length === 0 && ts.weightKg === null && !ts.notes) {
       await deleteSessionFromDb(ts.id);
@@ -2042,20 +2066,30 @@ document.addEventListener("click", (e) => {
     !e.target.closest("#profile-menu")
   )
     $("#profile-menu").classList.add("hidden");
-  // Dismiss pinned chart tooltips when tapping outside any chart canvas
-  if (!e.target.closest("canvas")) {
-    Object.values(state.charts).forEach((c) => {
-      if (c && c.__tooltipPinned) {
-        clearTimeout(c.__stickyTimer);
-        c.__tooltipPinned = false;
-        if (c.tooltip) {
-          c.tooltip.setActiveElements([], { x: 0, y: 0 });
-          c.update("none");
-        }
+});
+
+function dismissTooltips() {
+  Object.values(state.charts).forEach((c) => {
+    if (c && c.__tooltipPinned) {
+      clearTimeout(c.__stickyTimer);
+      c.__tooltipPinned = false;
+      if (c.tooltip) {
+        c.tooltip.setActiveElements([], { x: 0, y: 0 });
+        c.update("none");
       }
-    });
+    }
+  });
+}
+
+document.addEventListener("pointerdown", (e) => {
+  if (!e.target.closest("canvas")) {
+    dismissTooltips();
   }
 });
+
+document.addEventListener("scroll", () => {
+  dismissTooltips();
+}, { passive: true, capture: true });
 
 /* ═══ Init ═══ */
 resetForm();

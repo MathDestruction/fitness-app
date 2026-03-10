@@ -1,18 +1,11 @@
-- Goals element
-Fastest 5km run progress circle should be a bit larger.
-The 36min within the centre should fit better. currently touching the progress ring
-36 should remain as in, while the "min" should be in smaller text
+- Implement "optimistic UI", which is ui elements which update assuming the Server will respond to the request. In my case, this would be helpful with the plank counter. Currently, after tapping "+" there is a second or two pause/delay before anything gets updated. We can update the counter first and then wait for the server response in order to update the charts and graphs
 
-- Muscle Balance Chart, remove the key at the bottom. If possible add in the text into each segment of the chart
-The text should follow the curve of the chart segment. If the text cannot fit, that is fine, it can be cropped or completely hidden if too small
+- Needs to be able to submit new exercises, rather than being limited by the few that are already there in the dataset
+- Update "Russian Twist" to "Roman Chair - Side"
 
-- Distance Run graph should be change to Distance Covered, with two seperate lines. One for running, another for walking
-Combined section of tyhis graph should be removed
+- Need to replace "Weekly Load" not working and not helpful
 
-- Total Distance and Total time should be paired into the same block. As in, move the Total time stat into the same block as Total Distance
-This block should not change size, only the elements within it should
+- Muscle Balance, percentages are showing over tool tips
+- Tool tips for Volume and Recovery are not dissapearing when taping or scrolling elsewhere 
 
-We can then replace the Total Time block with a new element, which will be a Plank Counter
-This should be a simple counter mechanic with a small + and - button on either side. Each time I tap plus, a new plank entry of 60sec should be added to the dataset
-The counter should be seen as 0/10, 1/10, 2/10 etc. with a small progress bar underneath showing the progress
-Add a theme colored boreder around this block so that it stands out from the rest of the elements
+- Strength PRs not working
