@@ -673,7 +673,7 @@ function renderGoals(sessions) {
     const pct = Math.min(1, Math.max(0, (60 - best5.dur) / (60 - target)));
     const circ = 2 * Math.PI * 44;
     arcEl.setAttribute("stroke-dashoffset", circ * (1 - pct));
-    arcEl.setAttribute("stroke", best5.dur <= target ? "#4ADE80" : "#c2a700");
+    arcEl.style.stroke = best5.dur <= target ? "var(--accent)" : "var(--warning)";
   } else {
     timeEl.textContent = "-";
   }

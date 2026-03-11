@@ -1,11 +1,2 @@
-- Implement "optimistic UI", which is ui elements which update assuming the Server will respond to the request. In my case, this would be helpful with the plank counter. Currently, after tapping "+" there is a second or two pause/delay before anything gets updated. We can update the counter first and then wait for the server response in order to update the charts and graphs
+- Weekly load graph needs to be replaced with somethign else 
 
-- Needs to be able to submit new exercises, rather than being limited by the few that are already there in the dataset
-- Update "Russian Twist" to "Roman Chair - Side"
-
-- Need to replace "Weekly Load" not working and not helpful
-
-- Muscle Balance, percentages are showing over tool tips
-- Tool tips for Volume and Recovery are not dissapearing when taping or scrolling elsewhere 
-
-- Strength PRs not working
