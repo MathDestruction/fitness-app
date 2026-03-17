@@ -673,7 +673,7 @@ function renderGoals(sessions) {
     const pct = Math.min(1, Math.max(0, (60 - best5.dur) / (60 - target)));
     const circ = 2 * Math.PI * 44;
     arcEl.setAttribute("stroke-dashoffset", circ * (1 - pct));
-    arcEl.setAttribute("stroke", best5.dur <= target ? "#4ADE80" : "#c2a700");
+    arcEl.style.stroke = best5.dur <= target ? "var(--accent)" : "var(--warning)";
   } else {
     timeEl.textContent = "-";
   }
@@ -1635,28 +1635,30 @@ function addEntryCard(type, data = null) {
   let f = "";
   if (type === "cardio") {
     f = `<div class="entry-fields"><div class="search-wrap"><label class="form-label"><span>Exercise</span><input list="cardio-options" type="text" class="exercise-search" data-search-type="cardio" placeholder="Walk / Run / Row" value="${data?.exercise || ""}" autocomplete="off" /></label><div class="search-suggestions" id="suggestions-${idx}"></div></div><div class="form-row-3 compact-group"><label class="form-label"><span>Duration (min)</span><input type="number" class="entry-dur" min="0" step="0.01" value="${data?.durationMin || ""}" /></label><label class="form-label"><span>Distance (km)</span><input type="number" class="entry-dist" min="0" step="0.01" value="${data?.distanceKm || ""}" /></label><label class="form-label"><span>Speed (km/h)</span><input type="number" class="entry-speed" min="0" step="0.1" value="${data?.speedKmh || ""}" /></label></div><label class="form-label"><span>Note</span><textarea class="entry-note" rows="2">${data?.note || ""}</textarea></label></div>`;
-  } else if (type === "strength") {
-    const muscle = data?.muscle || "Chest";
+  } else if (type === 'strength') {
+    const muscle = data?.muscle || 'Chest';
     const muscleOpts = MUSCLES.map(
-      (m) => `<option ${m === muscle ? "selected" : ""}>${m}</option>`,
-    ).join("");
-    const sets = (
-      data?.sets || [
-        { weightKg: "", reps: "" },
-        { weightKg: "", reps: "" },
-        { weightKg: "", reps: "" },
-      ]
-    ).slice(0, data?.sets?.length || 3);
-    const setsHTML = sets
-      .map((s, si) => buildSetRow(si + 1, s.weightKg, s.reps))
-      .join("");
-    f = `<div class="entry-fields"><div class="form-row" style="grid-template-columns:1fr auto;"><div class="search-wrap"><label class="form-label"><span>Exercise</span><input list="strength-options" type="text" class="exercise-search" data-search-type="strength" placeholder="Select or enter custom" value="${data?.exercise || ""}" autocomplete="off" /></label><div class="search-suggestions" id="suggestions-${idx}"></div></div><label class="form-label"><span>Muscle</span><select class="entry-muscle">${muscleOpts}</select></label></div><div class="sets-container">${setsHTML}</div><label class="form-label"><span>Note</span><textarea class="entry-note" rows="2">${data?.note || ""}</textarea></label></div>`;
+      (m) => `<option ${m === muscle ? 'selected' : ''}>${m}</option>`,
+    ).join('');
+    f = `<div class="entry-fields"><div class="form-row" style="grid-template-columns:1fr auto;"><div class="search-wrap"><label class="form-label"><span>Exercise</span><input list="strength-options" type="text" class="exercise-search" data-search-type="strength" placeholder="Select or enter custom" value="${data?.exercise || ''}" autocomplete="off" /></label><div class="search-suggestions" id="suggestions-${idx}"></div></div><label class="form-label"><span>Muscle</span><select class="entry-muscle">${muscleOpts}</select></label></div><div class="sets-container"></div><label class="form-label"><span>Note</span><textarea class="entry-note" rows="2">${data?.note || ''}</textarea></label></div>`;
   } else {
     f = `<div class="entry-fields"><div class="search-wrap"><label class="form-label"><span>Exercise</span><input list="hold-options" type="text" class="exercise-search" data-search-type="hold" placeholder="Select or enter custom" value="${data?.exercise || ""}" autocomplete="off" /></label><div class="search-suggestions" id="suggestions-${idx}"></div></div><div class="form-row-3" style="grid-template-columns:1fr 1fr;"><label class="form-label"><span>Sets</span><select class="entry-hold-sets">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15].map((n) => `<option ${Number(data?.sets || 1) === n ? "selected" : ""}>${n}</option>`).join("")}</select></label><label class="form-label"><span>Seconds / set</span><select class="entry-hold-secs">${[10, 15, 20, 30, 45, 60, 75, 90, 120, 180].map((n) => `<option ${Number(data?.seconds || 30) === n ? "selected" : ""}>${n}</option>`).join("")}</select></label></div><label class="form-label"><span>Note</span><textarea class="entry-note" rows="2">${data?.note || ""}</textarea></label></div>`;
   }
   card.innerHTML = `<div class="entry-card-header"><div class="entry-card-title">${icons[type]} ${labels[type]}</div><button type="button" class="entry-remove" title="Remove entry">✕</button></div>${f}`;
   container.appendChild(card);
-  card.querySelector(".entry-remove").addEventListener("click", () => {
+
+  // For strength entries, populate set rows as DOM elements (needed for scroll wheel)
+  if (type === 'strength') {
+    const setsContainer = card.querySelector('.sets-container');
+    const setsData = data?.sets?.length
+      ? data.sets
+      : [{ weightKg: '', reps: '' }, { weightKg: '', reps: '' }, { weightKg: '', reps: '' }];
+    setsData.forEach((s, si) => {
+      setsContainer.appendChild(buildSetRow(si + 1, s.weightKg, s.reps));
+    });
+  }
+
+  card.querySelector('.entry-remove').addEventListener('click', () => {
     card.style.opacity = "0";
     card.style.transform = "translateX(-20px)";
     setTimeout(() => card.remove(), 200);
@@ -1667,7 +1669,160 @@ function addEntryCard(type, data = null) {
 }
 
 function buildSetRow(num, w, r) {
-  return `<div class="set-row"><div class="set-num">${num}</div><label class="form-label"><span style="font-size:0.72rem;">Weight (kg)</span><input type="number" class="set-weight" min="0" step="0.5" value="${w}" /></label><label class="form-label"><span style="font-size:0.72rem;">Reps</span><input type="number" class="set-reps" min="0" step="1" value="${r}" /></label><button type="button" class="set-remove" title="Remove set">✕</button></div>`;
+  const ITEM_H = 34;
+  const VISIBLE = 3; // items shown: prev, active, next
+
+  function createScrollWheel(initialValue, values, hiddenClass) {
+    let idx = values.indexOf(initialValue);
+    if (idx < 0) idx = 0;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'sw-wrap';
+    wrap.style.height = `${ITEM_H * VISIBLE}px`;
+
+    // Hidden input keeps .set-weight / .set-reps for collectEntries
+    const hidden = document.createElement('input');
+    hidden.type = 'number';
+    hidden.className = hiddenClass;
+    hidden.style.cssText = 'position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;';
+    hidden.value = values[idx];
+    hidden.tabIndex = -1;
+
+    const track = document.createElement('div');
+    track.className = 'sw-track';
+
+    values.forEach((v) => {
+      const item = document.createElement('div');
+      item.className = 'sw-item';
+      item.textContent = v;
+      item.style.height = `${ITEM_H}px`;
+      track.appendChild(item);
+    });
+
+    // Fade overlays
+    const fadeT = document.createElement('div');
+    fadeT.className = 'sw-fade sw-fade-top';
+    fadeT.style.height = `${ITEM_H}px`;
+    const fadeB = document.createElement('div');
+    fadeB.className = 'sw-fade sw-fade-bot';
+    fadeB.style.height = `${ITEM_H}px`;
+
+    // Center highlight (sized to one item height)
+    const center = document.createElement('div');
+    center.className = 'sw-center';
+    center.style.cssText = `top:${ITEM_H}px; height:${ITEM_H}px;`;
+
+    wrap.appendChild(track);
+    wrap.appendChild(fadeT);
+    wrap.appendChild(fadeB);
+    wrap.appendChild(center);
+    wrap.appendChild(hidden);
+
+    function snapToIdx(newIdx, animate = true) {
+      idx = Math.max(0, Math.min(values.length - 1, newIdx));
+      const offset = -(idx - 1) * ITEM_H; // keep active item in center (slot 1 of 3)
+      track.style.transition = animate
+        ? 'transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1)'
+        : 'none';
+      track.style.transform = `translateY(${offset}px)`;
+      hidden.value = values[idx];
+      track.querySelectorAll('.sw-item').forEach((el, i) => {
+        el.classList.toggle('sw-active', i === idx);
+      });
+    }
+
+    // Set initial position without animation
+    snapToIdx(idx, false);
+
+    // Mouse-wheel support
+    wrap.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      snapToIdx(idx + (e.deltaY > 0 ? 1 : -1));
+    }, { passive: false });
+
+    // Touch drag support
+    let touchStartY = 0;
+    let touchStartIdx = 0;
+    wrap.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+      touchStartIdx = idx;
+      track.style.transition = 'none';
+    }, { passive: true });
+    wrap.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const dy = touchStartY - e.touches[0].clientY;
+      const delta = Math.round(dy / ITEM_H);
+      const newIdx = Math.max(0, Math.min(values.length - 1, touchStartIdx + delta));
+      const offset = -(newIdx - 1) * ITEM_H;
+      track.style.transform = `translateY(${offset}px)`;
+      hidden.value = values[newIdx];
+      track.querySelectorAll('.sw-item').forEach((el, i) => {
+        el.classList.toggle('sw-active', i === newIdx);
+      });
+      idx = newIdx;
+    }, { passive: false });
+    wrap.addEventListener('touchend', () => { snapToIdx(idx); });
+
+    // Click on items above/below to step
+    track.addEventListener('click', (e) => {
+      const item = e.target.closest('.sw-item');
+      if (!item) return;
+      const clickedIdx = [...track.children].indexOf(item);
+      if (clickedIdx !== -1) snapToIdx(clickedIdx);
+    });
+
+    return wrap;
+  }
+
+  // Generate value arrays
+  const weightValues = [];
+  for (let v = 0; v <= 300; v += 0.5) {
+    weightValues.push(parseFloat(v.toFixed(1)));
+  }
+  const repsValues = [];
+  for (let v = 0; v <= 100; v++) {
+    repsValues.push(v);
+  }
+
+  const row = document.createElement('div');
+  row.className = 'set-row';
+
+  const numDiv = document.createElement('div');
+  numDiv.className = 'set-num';
+  numDiv.textContent = num;
+
+  const weightLabel = document.createElement('label');
+  weightLabel.className = 'form-label';
+  const weightSpan = document.createElement('span');
+  weightSpan.style.fontSize = '0.72rem';
+  weightSpan.textContent = 'Weight (kg)';
+  const wVal = parseFloat(w) || 0;
+  const weightWheel = createScrollWheel(wVal, weightValues, 'set-weight');
+  weightLabel.appendChild(weightSpan);
+  weightLabel.appendChild(weightWheel);
+
+  const repsLabel = document.createElement('label');
+  repsLabel.className = 'form-label';
+  const repsSpan = document.createElement('span');
+  repsSpan.style.fontSize = '0.72rem';
+  repsSpan.textContent = 'Reps';
+  const rVal = parseInt(r) || 0;
+  const repsWheel = createScrollWheel(rVal, repsValues, 'set-reps');
+  repsLabel.appendChild(repsSpan);
+  repsLabel.appendChild(repsWheel);
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'set-remove';
+  removeBtn.title = 'Remove set';
+  removeBtn.textContent = '✕';
+
+  row.appendChild(numDiv);
+  row.appendChild(weightLabel);
+  row.appendChild(repsLabel);
+  row.appendChild(removeBtn);
+
+  return row;
 }
 
 function wireSetRemove(c) {
@@ -1680,6 +1835,47 @@ function wireSetRemove(c) {
       });
     };
   });
+}
+
+/* ─── Pre-fill Helper ─── */
+function getLastStrengthData(exerciseName) {
+  const name = exerciseName.trim().toLowerCase();
+  // Find the most recent session (sessions are sorted asc so iterate desc)
+  const sessions = sortedDesc();
+  for (const s of sessions) {
+    // Skip the session currently being edited so we don't pre-fill from itself
+    if (s.id && s.id === state.editingId) continue;
+    for (const e of s.entries) {
+      if (e.type === 'strength' && e.exercise.toLowerCase() === name && e.sets?.length) {
+        return { sets: e.sets, date: s.sessionDate };
+      }
+    }
+  }
+  return null;
+}
+
+function applyPrefill(card, exerciseName) {
+  if (!exerciseName.trim()) return;
+  const prev = getLastStrengthData(exerciseName);
+  if (!prev) return;
+
+  // Remove existing prefill notice
+  card.querySelector('.prefill-notice')?.remove();
+
+  // Rebuild set rows with previous data
+  const setsContainer = card.querySelector('.sets-container');
+  if (!setsContainer) return;
+  setsContainer.innerHTML = '';
+  prev.sets.forEach((s, si) => {
+    setsContainer.appendChild(buildSetRow(si + 1, s.weightKg, s.reps));
+  });
+  wireSetRemove(setsContainer);
+
+  // Show notice
+  const notice = document.createElement('div');
+  notice.className = 'prefill-notice';
+  notice.innerHTML = `📋 Pre-filled from ${dateFmtShort(prev.date)} — edit as needed`;
+  setsContainer.before(notice);
 }
 
 function wireSmartSearch(card, type) {
@@ -1714,14 +1910,21 @@ function wireSmartSearch(card, type) {
     if (!i) return;
     input.value = i.dataset.name;
     sugDiv.classList.remove("open");
-    if (type === "strength" && i.dataset.muscle) {
-      const s = card.querySelector(".entry-muscle");
-      if (s) s.value = i.dataset.muscle;
+    if (type === "strength") {
+      if (i.dataset.muscle) {
+        const s = card.querySelector(".entry-muscle");
+        if (s) s.value = i.dataset.muscle;
+      }
+      applyPrefill(card, i.dataset.name);
     }
   });
-  input.addEventListener("blur", () =>
-    setTimeout(() => sugDiv.classList.remove("open"), 150),
-  );
+  input.addEventListener("blur", () => {
+    setTimeout(() => {
+      sugDiv.classList.remove("open");
+      // Also trigger prefill if user typed name directly without using dropdown
+      if (type === 'strength') applyPrefill(card, input.value);
+    }, 150);
+  });
 }
 
 /* ═══ Form: Reset, Open, Collect, Save ═══ */

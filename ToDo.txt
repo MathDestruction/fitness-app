@@ -1,11 +1,5 @@
-- Implement "optimistic UI", which is ui elements which update assuming the Server will respond to the request. In my case, this would be helpful with the plank counter. Currently, after tapping "+" there is a second or two pause/delay before anything gets updated. We can update the counter first and then wait for the server response in order to update the charts and graphs
+- New session, if an excersice has been selected, and has had previous sessions, the previous sessions weights and reps should be added. These can be edited if needed. Provides a good way to see what was done last yime to ensure same or improved performance 
 
-- Needs to be able to submit new exercises, rather than being limited by the few that are already there in the dataset
-- Update "Russian Twist" to "Roman Chair - Side"
+- Number fields should be scrollable, for example if the user wants to enter 8, they should be able to scroll to it, not have to type it out. This is especially useful for weight fields where the numbers can get quite large
 
-- Need to replace "Weekly Load" not working and not helpful
-
-- Muscle Balance, percentages are showing over tool tips
-- Tool tips for Volume and Recovery are not dissapearing when taping or scrolling elsewhere 
-
-- Strength PRs not working
+- 
