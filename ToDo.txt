@@ -1,2 +1,5 @@
-- Weekly load graph needs to be replaced with somethign else 
+- New session, if an excersice has been selected, and has had previous sessions, the previous sessions weights and reps should be added. These can be edited if needed. Provides a good way to see what was done last yime to ensure same or improved performance 
 
+- Number fields should be scrollable, for example if the user wants to enter 8, they should be able to scroll to it, not have to type it out. This is especially useful for weight fields where the numbers can get quite large
+
+- 

@@ -1323,7 +1323,7 @@ textarea {
   display: grid;
   grid-template-columns: auto 1fr 1fr auto;
   gap: 8px;
-  align-items: end;
+  align-items: center;
   animation: fadeUp 0.2s ease;
 }
 
@@ -1342,6 +1342,95 @@ textarea {
 
 .set-remove {
   display: none;
+}
+
+/* ─── Pre-fill Notice ─── */
+.prefill-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(134, 200, 163, 0.25);
+  border-radius: var(--radius-xs);
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  animation: fadeUp 0.25s ease;
+}
+
+/* ─── Scroll Wheel Picker ─── */
+.sw-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: ns-resize;
+  transition: border-color var(--transition);
+}
+
+.sw-wrap:focus-within,
+.sw-wrap:hover {
+  border-color: var(--accent);
+}
+
+.sw-track {
+  will-change: transform;
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.sw-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--muted);
+  transition: color 0.15s ease, font-size 0.15s ease;
+  cursor: pointer;
+}
+
+.sw-item.sw-active {
+  color: var(--txt);
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+/* Gradient fade overlays */
+.sw-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.sw-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--bg-raised) 0%, transparent 100%);
+}
+
+.sw-fade-bot {
+  bottom: 0;
+  background: linear-gradient(to top, var(--bg-raised) 0%, transparent 100%);
+}
+
+/* Accent highlight line for center slot */
+.sw-center {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  pointer-events: none;
+  z-index: 1;
+  border-top: 1px solid rgba(134, 200, 163, 0.3);
+  border-bottom: 1px solid rgba(134, 200, 163, 0.3);
+  background: rgba(134, 200, 163, 0.06);
+  border-radius: 4px;
 }
 
 .btn-add-set {
